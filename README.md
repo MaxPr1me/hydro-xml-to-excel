@@ -6,7 +6,7 @@ Simply upload your XML file and download the resulting Excel file.
 ## How It Works
 - **Input:** Upload an XML file containing hydro data.
 - **Process:** The app parses the XML, processes the data into a DataFrame, creates graphs, and writes everything into an Excel file.
-- **Output:** Download the Excel file containing the data and plots.
+- **Output:** Plots to be used in proven demand method.
 
 ## Technologies
 - Python, Gradio, Pandas, Matplotlib, and XlsxWriter
