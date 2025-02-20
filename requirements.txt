@@ -1,0 +1,8 @@
+gradio
+pandas
+pandas_read_xml
+XlsxWriter
+matplotlib
+seaborn
+plotly
+scikit-learn
