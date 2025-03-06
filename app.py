@@ -85,8 +85,13 @@ def process_xml(xml_file):
         multiplier_value = float(multiplier_element.text) if multiplier_element is not None else 0
         
         # Compute the scaling factor.
-        # raw_value * (10^(multiplier)) converts to Wh, then dividing by 1000 converts Wh to kWh.
-        scale_factor = (10 ** multiplier_value) / 1000
+        # If the multiplier is -6, assume the raw values are already in kWh.
+        if multiplier_value == -6:
+            scale_factor = 10 ** multiplier_value
+        else:
+            # Otherwise, assume raw_value is in Wh and convert to kWh by dividing by 1000.
+            scale_factor = (10 ** multiplier_value) / 1000
+        
         df['kWh'] = df['raw_value'] * scale_factor
         
         # Calculate amperage based on the time interval.
