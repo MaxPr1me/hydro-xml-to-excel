@@ -166,4 +166,4 @@ iface = gr.Interface(
     )
 )
 
-iface.launch()
+iface.launch(share=True)
