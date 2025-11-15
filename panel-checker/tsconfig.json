@@ -2,19 +2,24 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "noEmit": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": "./src",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "plotly.js-dist-min": ["../node_modules/@types/plotly.js/index"]
+    },
+    "jsx": "react-jsx"
   },
-  "include": ["src"],
+  "include": ["src", "types"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

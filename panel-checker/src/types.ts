@@ -9,7 +9,7 @@ export interface IntervalDatum {
 
 export interface CsvPreview {
   columns: string[];
-  rows: Record<string, string>[];
+  rows: Record<string, string | undefined>[];
 }
 
 export interface ColumnMapping {

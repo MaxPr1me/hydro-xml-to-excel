@@ -1,0 +1,8 @@
+# Build artifacts
+panel-checker/dist/
+panel-checker/tsconfig*.tsbuildinfo
+
+# Logs and OS cruft
+npm-debug.log*
+*.log
+.DS_Store

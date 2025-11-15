@@ -13,7 +13,7 @@ export function parseCsv(text: string): CsvPreview {
     skipEmptyLines: true
   });
 
-  const rows: Record<string, string>[] = [];
+  const rows: Record<string, string | undefined>[] = [];
   parsed.data.forEach((row) => {
     const safeRow = rowSchema.parse(row);
     rows.push(safeRow);
