@@ -10,3 +10,8 @@ Simply upload your XML file and download the resulting Excel file.
 
 ## Technologies
 - Python, Gradio, Pandas, Matplotlib, and XlsxWriter
+
+## Panel Checker branch work
+
+A new `panel-checker/` directory contains the GitHub Pages-ready React + TypeScript progressive web app that replaces the
+prior HuggingFace deployment. See `panel-checker/README.md` for setup instructions.
