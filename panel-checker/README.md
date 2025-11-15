@@ -1,29 +1,29 @@
 # Panel Checker
 
-Panel Checker is a single-page progressive web application that helps electricians, energy advisors, and DER installers
-screen whether an electrical panel has capacity for an additional load. The experience was designed for GitHub Pages so
-a free static deployment is all that is required—no HuggingFace hosting.
+Panel Checker helps electricians, energy advisors, and DER installers decide if an electrical panel has enough headroom for an added
+load. Upload a CSV (or future XML-to-CSV export) of interval data, map its columns, visualize the demand profile, and read a plain-
+language verdict that summarizes continuous vs. non-continuous loads. This React + Vite experience replaces the original
+"Hydro XML to Excel" Gradio demo while keeping the same goal: turn raw utility interval data into a confident go/no-go answer.
 
 ## Features
 
-- ⚡️ Drag-and-drop CSV uploader with a “try sample data” path.
-- ✅ Column mapper that validates cadence (15/30/60-minute) and converts kWh/kW/Amps to a normalized amps trace.
-- 📈 Plotly.js interactive demand chart with quick window toggle and export controls.
-- 🧮 Plain-language panel calculator that handles continuous vs. non-continuous loads, plus a what-if list for new
-  appliances.
-- 📄 Downloadable one-page text summary and an installable offline-ready PWA shell.
-- 🌐 Copy written with bilingual (EN/FR) tone and large, accessible controls sized for field tablets.
+- ⚡️ Drag-and-drop CSV uploader with a “try sample data” option for demos.
+- ✅ Column mapper that validates cadence (15/30/60-minute) and normalizes kWh/kW/Amps to amps.
+- 📈 Plotly.js interactive demand chart with window toggles and export controls.
+- 🧮 Plain-language panel calculator that differentiates continuous vs. non-continuous loads and lets you stack what-if scenarios.
+- 📄 Download-ready summary plus an installable offline PWA shell.
+- 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
 
 ## Tech stack
 
-- [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) bootstrapped with Vite.
-- [Tailwind CSS](https://tailwindcss.com/) for utility-first styling.
-- [Papa Parse](https://www.papaparse.com/) for forgiving CSV ingestion.
-- [Zod](https://github.com/colinhacks/zod) for runtime validation and human-friendly error strings.
-- [Plotly](https://plotly.com/javascript/) for the demand chart.
-- [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) for the installable experience.
+- [Vite](https://vitejs.dev/) + [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/) utility styling
+- [Papa Parse](https://www.papaparse.com/) for CSV ingestion
+- [Zod](https://github.com/colinhacks/zod) runtime validation
+- [Plotly](https://plotly.com/javascript/) charts
+- [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) for offline installs
 
-## Getting started
+## Local development
 
 ```bash
 cd panel-checker
@@ -31,28 +31,47 @@ npm install
 npm run dev
 ```
 
-To ship to GitHub Pages, enable Pages on the repository and point it to the `dist` folder produced by `npm run build`.
-`vite.config.ts` already ships with a minimal PWA manifest and service worker registration for offline installs.
+The development server prints a local URL plus a network URL so you can test on another device. Press `Ctrl+C` to stop it.
 
-## Project layout
+## Build for GitHub Pages (step-by-step)
+
+These steps assume you are comfortable cloning a repo but want very explicit directions for enabling GitHub Pages. Follow them in
+order; check off each step before moving on.
+
+1. **Fork the repo on GitHub.** Click the Fork button on the top-right of the repository page so you have your own copy.
+2. **Clone your fork.** In a terminal run `git clone <your-fork-url>` and then `cd hydro-xml-to-excel`.
+3. **Install Node.js 18+ if needed.** Download it from [nodejs.org](https://nodejs.org/) and rerun the previous step once
+   `node -v` works.
+4. **Install dependencies.** Run `cd panel-checker && npm install`. This grabs React, Vite, Plotly, etc.
+5. **Create a production build.** Still inside `panel-checker`, run `npm run build`. The command performs a strict type-check and
+   outputs the static site under `panel-checker/dist`.
+6. **Verify the build folder.** Run `ls dist` (while still inside `panel-checker`). You should see `index.html`, `assets/`, and a
+   `manifest.webmanifest`. If the folder is missing, rerun step 5 and fix any red error text.
+7. **Commit your work.** From the repo root, run `git add panel-checker && git commit -m "Build panel-checker"` and push it with
+   `git push` so GitHub has the latest code. You do **not** need to commit the `dist/` folder because the workflow below rebuilds
+   it for you.
+8. **Enable GitHub Pages.** In your fork, open **Settings → Pages**. Under **Build and deployment**, choose **Source: GitHub
+   Actions**. Save.
+9. **Review the workflow.** GitHub automatically picks up `.github/workflows/deploy-panel-checker.yml`, installs Node 20, runs
+   `npm ci`, builds the site, and uploads `panel-checker/dist` as the artifact GitHub Pages serves.
+10. **Watch the deployment.** Go to the **Actions** tab, open the "Deploy Panel Checker to Pages" workflow run, and wait for the
+    green check marks. The **deploy** job shows the published URL (usually
+    `https://<your-username>.github.io/<repo-name>/`).
+11. **Test the site.** Visit the published URL in a new browser tab. Use the "Try sample data" option if you do not have a CSV
+    handy and confirm that the chart, calculator, and report tabs load.
+12. **Repeat after changes.** Every push to `main` reruns the workflow. If you make a major UI or build change, ensure the README
+    and this runbook stay accurate (see `AGENTS.md`).
+
+## Repository layout
 
 ```
-panel-checker/
-├── public/           # manifest, icons, sample CSV
-├── src/
-│   ├── components/   # uploader, mapper, chart, calculator, report
-│   ├── lib/          # parsing, unit math, calculator helpers
-│   ├── pages/        # upload/validate + results views
-│   ├── App.tsx       # tab navigation + routing-lite
-│   └── styles.css    # Tailwind entrypoint
-├── tailwind.config.ts
-├── vite.config.ts
-└── package.json
+panel-checker/          # React + Vite app and build scripts
+├── public/             # Static assets, manifest, icons, sample CSV
+├── src/                # Components, pages, lib helpers
+├── types/              # Extra .d.ts shims for tooling
+├── package.json        # npm scripts and dependencies
+└── vite.config.ts      # PWA-enabled build config
 ```
 
-## Roadmap-friendly hooks
-
-- The parsing utilities were written so Green Button XML data can be slotted in by converting it to the `CsvPreview`
-  shape before hitting the mapper.
-- Additional locales can swap the copy by wrapping `App` with a translation provider—UI labels are centralized.
-- PDF export can be added by piping the `ReportCard` data through a headless print library.
+The legacy Python app (`app.py` + `requirements.txt`) has been removed from this branch so that the focus stays on the static web
+app that runs on GitHub Pages.

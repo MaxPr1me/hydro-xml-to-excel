@@ -7,6 +7,9 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             includeAssets: ['icon.svg', 'sample-15min.csv'],
+            workbox: {
+                maximumFileSizeToCacheInBytes: 6 * 1024 * 1024
+            },
             manifest: {
                 name: 'Panel Checker',
                 short_name: 'PanelCheck',
@@ -32,5 +35,8 @@ export default defineConfig({
     server: {
         host: true,
         port: 5173
+    },
+    resolve: {
+        extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
     }
 });
