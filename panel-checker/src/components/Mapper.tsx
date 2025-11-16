@@ -14,7 +14,7 @@ export default function Mapper({ preview, onComplete }: Props) {
   const [mapping, setMapping] = useState<ColumnMapping>({
     timeColumn: preview.columns[0] ?? '',
     valueColumn: preview.columns[1] ?? '',
-    unit: 'kW',
+    unit: 'kWh',
     voltage: 120
   });
   const [error, setError] = useState<string | null>(null);

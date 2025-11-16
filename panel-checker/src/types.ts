@@ -50,4 +50,5 @@ export interface PanelVerdict {
   availableMargin: number;
   status: 'OK' | 'Review' | 'Upgrade';
   message: string;
+  proposedLoads: Array<Pick<LoadEntry, 'name' | 'amps' | 'continuous'>>;
 }
