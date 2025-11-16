@@ -4,8 +4,44 @@ import { ColumnMapping, CsvPreview, IntervalDatum, IntervalUnit } from '../types
 import { toIntervalDatum } from './units';
 
 const ACCEPTED_CADENCE = [15, 30, 60];
+const MS_PER_MINUTE = 60_000;
+const MS_PER_YEAR = 365 * 24 * 60 * MS_PER_MINUTE;
+const ESPI_NS = 'http://naesb.org/espi';
+const ZIP_LOCAL_FILE_HEADER = 0x04034b50;
+const ZIP_CENTRAL_DIRECTORY = 0x02014b50;
+const ZIP_END_OF_CENTRAL_DIRECTORY = 0x06054b50;
+
+type ZipEntry = {
+  name: string;
+  compression: number;
+  compressedSize: number;
+  uncompressedSize: number;
+  localHeaderOffset: number;
+};
 
 const rowSchema = z.record(z.string(), z.string().optional());
+
+export type FileFormat = 'csv' | 'excel' | 'xml';
+
+export function detectFileFormat(name: string, mime: string): FileFormat | null {
+  const loweredName = name.toLowerCase();
+  const loweredType = mime.toLowerCase();
+  if (loweredName.endsWith('.csv') || loweredType.includes('csv')) {
+    return 'csv';
+  }
+  if (
+    loweredName.endsWith('.xlsx') ||
+    loweredName.endsWith('.xls') ||
+    loweredType.includes('spreadsheetml') ||
+    loweredType.includes('excel')
+  ) {
+    return 'excel';
+  }
+  if (loweredName.endsWith('.xml') || loweredType.includes('xml')) {
+    return 'xml';
+  }
+  return null;
+}
 
 export function parseCsv(text: string): CsvPreview {
   const parsed = Papa.parse<Record<string, string>>(text, {
@@ -20,19 +56,67 @@ export function parseCsv(text: string): CsvPreview {
   });
 
   const columns = parsed.meta.fields ?? [];
+  if (!columns.length) {
+    throw new Error('No headers detected. Add column names to the first row.');
+  }
   return { columns, rows };
+}
+
+export async function parseExcel(buffer: ArrayBuffer): Promise<CsvPreview> {
+  const zip = new SimpleZip(buffer);
+  const workbookXml = await zip.readText('xl/workbook.xml');
+  if (!workbookXml) {
+    throw new Error('Workbook metadata is missing.');
+  }
+  const workbookDoc = parseXml(workbookXml);
+  const sheetNode = workbookDoc.getElementsByTagName('sheet')[0];
+  if (!sheetNode) {
+    throw new Error('Workbook did not contain any worksheets.');
+  }
+  const relId = sheetNode.getAttribute('r:id') ?? sheetNode.getAttribute('id');
+  const relsXml = await zip.readText('xl/_rels/workbook.xml.rels');
+  const sheetTarget = resolveSheetTarget(relsXml, relId);
+  const worksheetXml = await zip.readText(sheetTarget);
+  if (!worksheetXml) {
+    throw new Error('Worksheet data could not be read.');
+  }
+  const sharedStringsXml = await zip.readText('xl/sharedStrings.xml');
+  const sharedStrings = sharedStringsXml ? extractSharedStrings(sharedStringsXml) : [];
+  const table = extractRowsFromWorksheet(worksheetXml, sharedStrings);
+  return tableToPreview(table);
+}
+
+export function parseGreenButtonXml(text: string): CsvPreview {
+  const doc = parseXml(text);
+  const readings = Array.from(doc.getElementsByTagNameNS(ESPI_NS, 'IntervalReading'));
+  if (!readings.length) {
+    throw new Error('No interval readings were found in the XML file.');
+  }
+
+  const rows = readings.map((node) => {
+    const startSeconds = Number(node.getElementsByTagNameNS(ESPI_NS, 'start')[0]?.textContent ?? '0');
+    const valueWh = Number(node.getElementsByTagNameNS(ESPI_NS, 'value')[0]?.textContent ?? '0');
+    const timestamp = new Date(startSeconds * 1000).toISOString();
+    const kwh = valueWh / 1000;
+    return {
+      timestamp,
+      energy_kwh: kwh.toFixed(4)
+    } satisfies Record<string, string>;
+  });
+
+  return { columns: ['timestamp', 'energy_kwh'], rows };
 }
 
 export interface MappingResult {
   data: IntervalDatum[];
   cadenceMinutes: number;
   unit: IntervalUnit;
+  coverageStart: Date;
+  coverageEnd: Date;
+  maxAmps: number;
 }
 
-export function mapRecords(
-  preview: CsvPreview,
-  mapping: ColumnMapping
-): MappingResult {
+export function mapRecords(preview: CsvPreview, mapping: ColumnMapping): MappingResult {
   const raw: Array<{ timestamp: Date; value: number }> = [];
 
   preview.rows.forEach((row) => {
@@ -64,7 +148,17 @@ export function mapRecords(
     toIntervalDatum(row.timestamp, row.value, mapping.unit, mapping.voltage, cadenceMinutes)
   );
 
-  return { data: records, cadenceMinutes, unit: mapping.unit };
+  const trimmed = enforceYearWindow(records);
+  const maxAmps = Math.max(...trimmed.map((item) => item.amps));
+
+  return {
+    data: trimmed,
+    cadenceMinutes,
+    unit: mapping.unit,
+    coverageStart: trimmed[0].timestamp,
+    coverageEnd: trimmed[trimmed.length - 1].timestamp,
+    maxAmps
+  };
 }
 
 export function validateCadence(records: IntervalDatum[]): { cadenceMinutes: number } {
@@ -74,7 +168,7 @@ export function validateCadence(records: IntervalDatum[]): { cadenceMinutes: num
 
   const diffs: number[] = [];
   for (let i = 1; i < records.length; i += 1) {
-    const delta = (records[i].timestamp.getTime() - records[i - 1].timestamp.getTime()) / 60000;
+    const delta = (records[i].timestamp.getTime() - records[i - 1].timestamp.getTime()) / MS_PER_MINUTE;
     if (delta > 0) {
       diffs.push(Math.round(delta));
     }
@@ -88,6 +182,28 @@ export function validateCadence(records: IntervalDatum[]): { cadenceMinutes: num
   }
 
   return { cadenceMinutes: cadence };
+}
+
+function enforceYearWindow(records: IntervalDatum[]): IntervalDatum[] {
+  if (!records.length) {
+    throw new Error('No rows remained after parsing.');
+  }
+  const intervalMs = records[0].intervalMinutes * MS_PER_MINUTE;
+  const startMs = records[0].timestamp.getTime();
+  const endMs = records[records.length - 1].timestamp.getTime();
+  if (endMs - startMs < MS_PER_YEAR - intervalMs) {
+    throw new Error('Upload at least one continuous year of interval data.');
+  }
+  const cutoff = endMs - MS_PER_YEAR;
+  const trimmed = records.filter((record) => record.timestamp.getTime() >= cutoff);
+  if (!trimmed.length) {
+    throw new Error('No recent data points were found in the last year.');
+  }
+  const trimmedSpan = trimmed[trimmed.length - 1].timestamp.getTime() - trimmed[0].timestamp.getTime();
+  if (trimmedSpan < MS_PER_YEAR - intervalMs) {
+    throw new Error('We need data covering the most recent 12 months to proceed.');
+  }
+  return trimmed;
 }
 
 function mode(values: number[]): number {
@@ -124,4 +240,203 @@ function percentile(values: number[], pct: number) {
   if (!values.length) return 0;
   const idx = Math.min(values.length - 1, Math.floor(values.length * pct));
   return values[idx];
+}
+
+function parseXml(text: string): Document {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) {
+    throw new Error('Uploaded file contains invalid XML.');
+  }
+  return doc;
+}
+
+function resolveSheetTarget(relsXml: string | null, relId: string | null): string {
+  if (!relsXml || !relId) {
+    return 'xl/worksheets/sheet1.xml';
+  }
+  const doc = parseXml(relsXml);
+  const relationships = Array.from(doc.getElementsByTagName('Relationship'));
+  const match = relationships.find((node) => node.getAttribute('Id') === relId);
+  const target = match?.getAttribute('Target');
+  if (!target) {
+    return 'xl/worksheets/sheet1.xml';
+  }
+  const normalized = target.replace(/^\.\//, '').replace(/^\//, '');
+  return normalized.startsWith('xl/') ? normalized : `xl/${normalized}`;
+}
+
+function extractSharedStrings(xml: string): string[] {
+  const doc = parseXml(xml);
+  const items = Array.from(doc.getElementsByTagName('si'));
+  return items.map((item) => {
+    const textNodes = Array.from(item.getElementsByTagName('t'));
+    if (textNodes.length) {
+      return textNodes.map((node) => node.textContent ?? '').join('');
+    }
+    return item.textContent ?? '';
+  });
+}
+
+function extractRowsFromWorksheet(xml: string, sharedStrings: string[]): string[][] {
+  const doc = parseXml(xml);
+  const rows: string[][] = [];
+  const rowNodes = Array.from(doc.getElementsByTagName('row'));
+  rowNodes.forEach((rowNode) => {
+    const cells = Array.from(rowNode.getElementsByTagName('c'));
+    const rowValues: string[] = [];
+    let currentCol = 0;
+    cells.forEach((cell) => {
+      const ref = cell.getAttribute('r') ?? '';
+      const colLabel = ref.replace(/\d+/g, '');
+      const colIndex = colLabel ? columnLabelToIndex(colLabel) : currentCol;
+      while (currentCol < colIndex) {
+        rowValues.push('');
+        currentCol += 1;
+      }
+      const type = cell.getAttribute('t');
+      const rawValue = cell.getElementsByTagName('v')[0]?.textContent ?? '';
+      let finalValue = rawValue;
+      if (type === 's') {
+        finalValue = sharedStrings[Number(rawValue)] ?? '';
+      }
+      rowValues.push(finalValue ?? '');
+      currentCol += 1;
+    });
+    rows.push(rowValues);
+  });
+  return rows;
+}
+
+function columnLabelToIndex(label: string): number {
+  let result = 0;
+  for (let i = 0; i < label.length; i += 1) {
+    const charCode = label.charCodeAt(i) - 64; // A -> 1
+    result = result * 26 + charCode;
+  }
+  return Math.max(0, result - 1);
+}
+
+function tableToPreview(rows: string[][]): CsvPreview {
+  if (!rows.length) {
+    throw new Error('Worksheet is empty.');
+  }
+  const headers = ensureUniqueHeaders(rows[0] ?? []);
+  if (!headers.length) {
+    throw new Error('The first row must include headers.');
+  }
+  const records = rows
+    .slice(1)
+    .map((cells) => {
+      const record: Record<string, string | undefined> = {};
+      headers.forEach((header, index) => {
+        const value = cells[index];
+        record[header] = value?.toString().trim() ? value.toString() : undefined;
+      });
+      return record;
+    })
+    .filter((record) => headers.some((header) => (record[header]?.length ?? 0) > 0));
+  return { columns: headers, rows: records };
+}
+
+function ensureUniqueHeaders(raw: string[]): string[] {
+  const counts = new Map<string, number>();
+  return raw.map((value, index) => {
+    const base = value?.trim() || `Column ${index + 1}`;
+    const count = counts.get(base) ?? 0;
+    counts.set(base, count + 1);
+    return count === 0 ? base : `${base} (${count + 1})`;
+  });
+}
+
+class SimpleZip {
+  private readonly buffer: ArrayBuffer;
+
+  private readonly view: DataView;
+
+  private readonly entries: ZipEntry[];
+
+  constructor(buffer: ArrayBuffer) {
+    this.buffer = buffer;
+    this.view = new DataView(buffer);
+    this.entries = parseCentralDirectory(buffer);
+  }
+
+  async readText(name: string): Promise<string | null> {
+    const entry = this.entries.find((item) => item.name === name);
+    if (!entry) {
+      return null;
+    }
+    const bytes = await this.inflate(entry);
+    return new TextDecoder().decode(bytes);
+  }
+
+  private async inflate(entry: ZipEntry): Promise<Uint8Array> {
+    const compressed = this.slice(entry);
+    if (entry.compression === 0) {
+      return compressed;
+    }
+    if (entry.compression !== 8) {
+      throw new Error(`Unsupported XLSX compression method: ${entry.compression}`);
+    }
+    if (typeof DecompressionStream === 'undefined') {
+      throw new Error('Excel parsing requires a browser with DecompressionStream support.');
+    }
+    const stream = new DecompressionStream('deflate-raw' as CompressionFormat);
+    const writer = stream.writable.getWriter();
+    await writer.write(compressed as unknown as BufferSource);
+    await writer.close();
+    const result = await new Response(stream.readable).arrayBuffer();
+    return new Uint8Array(result);
+  }
+
+  private slice(entry: ZipEntry): Uint8Array {
+    const offset = entry.localHeaderOffset;
+    const signature = this.view.getUint32(offset, true);
+    if (signature !== ZIP_LOCAL_FILE_HEADER) {
+      throw new Error('Malformed XLSX archive.');
+    }
+    const nameLength = this.view.getUint16(offset + 26, true);
+    const extraLength = this.view.getUint16(offset + 28, true);
+    const dataStart = offset + 30 + nameLength + extraLength;
+    const sliced = this.buffer.slice(dataStart, dataStart + entry.compressedSize);
+    return new Uint8Array(sliced);
+  }
+}
+
+function parseCentralDirectory(buffer: ArrayBuffer): ZipEntry[] {
+  const view = new DataView(buffer);
+  const endOffset = findEndOfCentralDirectory(view);
+  const directorySize = view.getUint32(endOffset + 12, true);
+  const directoryOffset = view.getUint32(endOffset + 16, true);
+  const entries: ZipEntry[] = [];
+  let cursor = directoryOffset;
+  const decoder = new TextDecoder();
+  while (cursor < directoryOffset + directorySize) {
+    const signature = view.getUint32(cursor, true);
+    if (signature !== ZIP_CENTRAL_DIRECTORY) {
+      break;
+    }
+    const compression = view.getUint16(cursor + 10, true);
+    const compressedSize = view.getUint32(cursor + 20, true);
+    const uncompressedSize = view.getUint32(cursor + 24, true);
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const localHeaderOffset = view.getUint32(cursor + 42, true);
+    const nameBytes = new Uint8Array(buffer, cursor + 46, nameLength);
+    const name = decoder.decode(nameBytes);
+    entries.push({ name, compression, compressedSize, uncompressedSize, localHeaderOffset });
+    cursor += 46 + nameLength + extraLength + commentLength;
+  }
+  return entries;
+}
+
+function findEndOfCentralDirectory(view: DataView): number {
+  for (let offset = view.byteLength - 22; offset >= 0; offset -= 1) {
+    if (view.getUint32(offset, true) === ZIP_END_OF_CENTRAL_DIRECTORY) {
+      return offset;
+    }
+  }
+  throw new Error('Could not read XLSX archive.');
 }

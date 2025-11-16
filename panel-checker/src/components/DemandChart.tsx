@@ -2,48 +2,94 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Plotly from 'plotly.js-dist-min';
 import { IntervalDatum } from '../types';
 import { computeDemandStats } from '../lib/parse';
+import { convertToKwh } from '../lib/units';
 
 interface Props {
   data: IntervalDatum[];
 }
 
+type Metric = 'amps' | 'kwh';
+
 export default function DemandChart({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [windowMinutes, setWindowMinutes] = useState<15 | 60>(15);
+  const [metric, setMetric] = useState<Metric>('amps');
   const stats = useMemo(() => computeDemandStats(data), [data]);
 
+  const derived = useMemo(
+    () =>
+      data.map((datum) => ({
+        timestamp: datum.timestamp,
+        amps: datum.amps,
+        kwh: convertToKwh(datum.value, datum.unit, datum.voltage, datum.intervalMinutes)
+      })),
+    [data]
+  );
+
+  const pointsPerWindow = useMemo(() => {
+    if (!data.length) {
+      return 1;
+    }
+    const cadence = data[0].intervalMinutes || 15;
+    return Math.max(1, Math.round(windowMinutes / cadence));
+  }, [data, windowMinutes]);
+
   useEffect(() => {
-    if (!ref.current || !data.length) {
+    if (!ref.current || !derived.length) {
       return;
     }
 
-    const filtered = data.filter((datum, index) => {
-      if (windowMinutes === 60) {
-        return index % 4 === 0;
-      }
-      return true;
-    });
+    const filtered = pointsPerWindow === 1 ? derived : derived.filter((_, index) => index % pointsPerWindow === 0);
+    const yLabel = metric === 'amps' ? 'Amps' : 'kWh';
+    const hoverSuffix = metric === 'amps' ? 'A' : 'kWh';
+    const series = filtered.map((datum) => (metric === 'amps' ? datum.amps : datum.kwh));
+    const peak = filtered.reduce(
+      (best, datum) => {
+        const value = metric === 'amps' ? datum.amps : datum.kwh;
+        if (value > best.value) {
+          return { value, timestamp: datum.timestamp };
+        }
+        return best;
+      },
+      { value: -Infinity, timestamp: null as Date | null }
+    );
 
-    const trace = {
+    const trace: Plotly.Data = {
       x: filtered.map((datum) => datum.timestamp),
-      y: filtered.map((datum) => datum.amps),
+      y: series,
       type: 'scatter',
       mode: 'lines',
       line: { color: '#0ea5e9', width: 2 },
-      hovertemplate: '%{x}<br>%{y:.1f} A<extra></extra>'
-    } as Partial<Plotly.Data>;
+      hovertemplate: `%{x}<br>%{y:.2f} ${hoverSuffix}<extra></extra>`
+    };
+
+    const peakTrace =
+      peak.timestamp !== null
+        ? ({
+            x: [peak.timestamp],
+            y: [peak.value],
+            type: 'scatter',
+            mode: 'text+markers',
+            marker: { color: '#f97316', size: 10 },
+            text: ['Peak'],
+            textposition: 'top center',
+            hovertemplate: `Peak %{y:.2f} ${hoverSuffix}<extra></extra>`
+          } satisfies Plotly.Data)
+        : null;
 
     const layout: Partial<Plotly.Layout> = {
-      margin: { t: 32, r: 16, b: 48, l: 48 },
+      margin: { t: 32, r: 16, b: 48, l: 56 },
       paper_bgcolor: 'rgba(255,255,255,0)',
       plot_bgcolor: 'rgba(255,255,255,0)',
       xaxis: { title: 'Time', automargin: true },
-      yaxis: { title: 'Amps', rangemode: 'tozero', automargin: true },
+      yaxis: { title: yLabel, rangemode: 'tozero', automargin: true },
       showlegend: false,
       font: { family: 'Inter, sans-serif', color: '#0f172a' }
     };
 
-    Plotly.newPlot(ref.current, [trace], layout, {
+    const traces: Plotly.Data[] = peakTrace ? [trace, peakTrace] : [trace];
+
+    Plotly.newPlot(ref.current, traces, layout, {
       responsive: true,
       displaylogo: false,
       modeBarButtonsToRemove: ['select2d', 'lasso2d']
@@ -52,7 +98,17 @@ export default function DemandChart({ data }: Props) {
     return () => {
       Plotly.purge(ref.current as HTMLDivElement);
     };
-  }, [data, windowMinutes]);
+  }, [derived, metric, pointsPerWindow]);
+
+  const exportChart = () => {
+    if (!ref.current) return;
+    Plotly.downloadImage(ref.current, {
+      filename: `panel-checker-${metric}`,
+      format: 'png',
+      width: 1280,
+      height: 720
+    });
+  };
 
   return (
     <section className="space-y-3 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm">
@@ -61,12 +117,27 @@ export default function DemandChart({ data }: Props) {
           <h2 className="text-lg font-semibold text-slate-900">Demand profile</h2>
           {stats && (
             <p className="text-sm text-slate-600">
-              Peak {stats.maxAmps.toFixed(0)} A · 95th percentile {stats.percentile95.toFixed(0)} A
+              One-year peak {stats.maxAmps.toFixed(0)} A · 95th percentile {stats.percentile95.toFixed(0)} A
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-slate-600">Window</span>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-slate-600">View</span>
+          <button
+            type="button"
+            className={`rounded-full px-3 py-1 ${metric === 'amps' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+            onClick={() => setMetric('amps')}
+          >
+            Amps
+          </button>
+          <button
+            type="button"
+            className={`rounded-full px-3 py-1 ${metric === 'kwh' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+            onClick={() => setMetric('kwh')}
+          >
+            kWh
+          </button>
+          <span className="ml-4 text-slate-600">Window</span>
           <button
             type="button"
             className={`rounded-full px-3 py-1 ${windowMinutes === 15 ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}
@@ -80,6 +151,13 @@ export default function DemandChart({ data }: Props) {
             onClick={() => setWindowMinutes(60)}
           >
             Hourly
+          </button>
+          <button
+            type="button"
+            className="ml-4 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600"
+            onClick={exportChart}
+          >
+            Export PNG
           </button>
         </div>
       </header>

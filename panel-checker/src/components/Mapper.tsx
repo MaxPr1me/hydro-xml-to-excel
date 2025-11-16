@@ -15,7 +15,7 @@ export default function Mapper({ preview, onComplete }: Props) {
     timeColumn: preview.columns[0] ?? '',
     valueColumn: preview.columns[1] ?? '',
     unit: 'kW',
-    voltage: 240
+    voltage: 120
   });
   const [error, setError] = useState<string | null>(null);
 

@@ -10,15 +10,16 @@ interface Props {
 
 export default function Home({ onData }: Props) {
   const [preview, setPreview] = useState<CsvPreview | null>(null);
-  const [mapped, setMapped] = useState<IntervalDatum[] | null>(null);
+  const [result, setResult] = useState<MappingResult | null>(null);
 
-  const handlePreview = (result: CsvPreview) => {
-    setPreview(result);
+  const handlePreview = (parsed: CsvPreview) => {
+    setPreview(parsed);
+    setResult(null);
   };
 
-  const handleMapping = (result: MappingResult) => {
-    setMapped(result.data);
-    onData(result.data);
+  const handleMapping = (mappingResult: MappingResult) => {
+    setResult(mappingResult);
+    onData(mappingResult.data);
   };
 
   return (
@@ -27,16 +28,19 @@ export default function Home({ onData }: Props) {
         <p className="text-sm uppercase tracking-[0.3em] text-brand-100">Electrical planning</p>
         <h1 className="mt-3 text-3xl font-bold">Check if a panel has room before rolling a truck.</h1>
         <p className="mt-3 max-w-2xl text-base text-brand-100">
-          Upload interval data, validate cadence and units, graph the demand, and run a friendly calculator to see if
-          another EV charger, heat pump, or range can be added.
+          Upload interval data, validate cadence and units, graph the demand, and run a friendly calculator to see if another EV
+          charger, heat pump, or range can be added.
         </p>
       </section>
 
       <Uploader onPreview={handlePreview} />
       {preview && <Mapper preview={preview} onComplete={handleMapping} />}
-      {mapped && (
+      {result && (
         <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-900">
-          Data OK! {mapped.length.toLocaleString()} rows were validated. Jump to the results tab to explore.
+          Data OK! {result.data.length.toLocaleString()} intervals covering
+          {' '}
+          {result.coverageStart.toLocaleDateString()} — {result.coverageEnd.toLocaleDateString()}.
+          {' '}One-year peak demand hit {result.maxAmps.toFixed(1)} A.
         </div>
       )}
     </main>

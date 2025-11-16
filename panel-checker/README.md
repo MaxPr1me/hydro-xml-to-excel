@@ -1,16 +1,16 @@
 # Panel Checker
 
 Panel Checker helps electricians, energy advisors, and DER installers decide if an electrical panel has enough headroom for an added
-load. Upload a CSV (or future XML-to-CSV export) of interval data, map its columns, visualize the demand profile, and read a plain-
+load. Upload CSV, XLSX, or Green Button XML interval data, map its columns, visualize the demand profile, and read a plain-
 language verdict that summarizes continuous vs. non-continuous loads. This React + Vite experience replaces the original
 "Hydro XML to Excel" Gradio demo while keeping the same goal: turn raw utility interval data into a confident go/no-go answer.
 
 ## Features
 
-- ⚡️ Drag-and-drop CSV uploader with a “try sample data” option for demos.
-- ✅ Column mapper that validates cadence (15/30/60-minute) and normalizes kWh/kW/Amps to amps.
-- 📈 Plotly.js interactive demand chart with window toggles and export controls.
-- 🧮 Plain-language panel calculator that differentiates continuous vs. non-continuous loads and lets you stack what-if scenarios.
+- ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files with sample data for each format.
+- ✅ Column mapper that validates cadence (15/30/60-minute), enforces a one-year window, and normalizes kWh/kW/Amps to amps using a 120 V default.
+- 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable images.
+- 🧮 Plain-language panel calculator that anchors to the absolute one-year max (×1.25), differentiates continuous vs. non-continuous loads, and lets you stack what-if scenarios.
 - 📄 Download-ready summary plus an installable offline PWA shell.
 - 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
 

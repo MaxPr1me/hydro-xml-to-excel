@@ -17,3 +17,4 @@ changed and why. This keeps future agents oriented.
 ## Change log
 
 - 2024-05-16 – Panel Checker promoted to the repo root, Python artifacts removed, GitHub Pages workflow + docs added.
+- 2025-11-16 – Multi-format (CSV/XLSX/XML) ingestion plus one-year normalization added to the Panel Checker uploader.
