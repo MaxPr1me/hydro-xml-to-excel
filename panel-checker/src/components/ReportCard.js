@@ -6,7 +6,7 @@ export default function ReportCard({ data, verdict }) {
         if (!stats)
             return;
         const lines = [
-            'Panel Checker summary',
+            "LEEP's Electrical Panel Screening Tool - Proven Demand Method",
             `Coverage: ${stats.start.toISOString()} — ${stats.end.toISOString()}`,
             `Cadence: ${stats.cadenceMinutes} minutes`,
             `Peak amps: ${stats.maxAmps.toFixed(1)}`,

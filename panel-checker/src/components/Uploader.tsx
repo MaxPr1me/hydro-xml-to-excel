@@ -111,7 +111,7 @@ export default function Uploader({ onPreview }: Props) {
         </div>
         <button
           type="button"
-          className="rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow"
+          className="rounded-full bg-accent-400 px-5 py-2 text-sm font-semibold text-brand-900 shadow"
           onClick={() => inputRef.current?.click()}
           disabled={isLoading}
         >

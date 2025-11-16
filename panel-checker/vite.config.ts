@@ -12,10 +12,10 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024
       },
       manifest: {
-        name: 'Panel Checker',
-        short_name: 'PanelCheck',
-        description: 'Upload interval data, graph demand, and screen new loads.',
-        theme_color: '#0f172a',
+        name: "LEEP's Electrical Panel Screening Tool - Proven Demand Method",
+        short_name: 'LEEP Panel',
+        description: 'LEEP Proven Demand Method screening for electrical panels with utility interval data.',
+        theme_color: '#021b33',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

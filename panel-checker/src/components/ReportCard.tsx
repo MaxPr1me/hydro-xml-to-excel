@@ -13,7 +13,7 @@ export default function ReportCard({ data, verdict }: Props) {
   const downloadReport = () => {
     if (!stats) return;
     const lines = [
-      'Panel Checker summary',
+      "LEEP's Electrical Panel Screening Tool - Proven Demand Method",
       `Coverage: ${stats.start.toISOString()} — ${stats.end.toISOString()}`,
       `Cadence: ${stats.cadenceMinutes} minutes`,
       `Peak amps: ${stats.maxAmps.toFixed(1)}`,
@@ -28,7 +28,7 @@ export default function ReportCard({ data, verdict }: Props) {
       });
     }
     lines.push('', 'This is a screening tool only. Confirm with a licensed electrician.');
-    downloadTextFile('panel-checker-report.txt', lines.join('\n'));
+    downloadTextFile('leeps-panel-screening-report.txt', lines.join('\n'));
   };
 
   return (

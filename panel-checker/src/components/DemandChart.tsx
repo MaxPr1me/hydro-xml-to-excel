@@ -50,7 +50,7 @@ export default function DemandChart({ data }: Props) {
       y: series,
       type: 'scatter',
       mode: 'lines',
-      line: { color: '#0ea5e9', width: 2 },
+      line: { color: '#1f6bc4', width: 2 },
       hovertemplate: `%{x}<br>%{y:.2f} ${hoverSuffix}<extra></extra>`
     };
 
@@ -61,7 +61,7 @@ export default function DemandChart({ data }: Props) {
             y: [peak.value],
             type: 'scatter',
             mode: 'text+markers',
-            marker: { color: '#f97316', size: 10 },
+            marker: { color: '#9cd956', size: 10 },
             text: ['Peak'],
             textposition: 'top center',
             hovertemplate: `Peak %{y:.2f} ${hoverSuffix}<extra></extra>`
@@ -75,7 +75,7 @@ export default function DemandChart({ data }: Props) {
       xaxis: { title: 'Time', automargin: true },
       yaxis: { title: yLabel, rangemode: 'tozero', automargin: true },
       showlegend: false,
-      font: { family: 'Inter, sans-serif', color: '#0f172a' }
+      font: { family: 'Inter, sans-serif', color: '#021b33' }
     };
 
     const traces: Plotly.Data[] = peakTrace ? [trace, peakTrace] : [trace];
@@ -94,7 +94,7 @@ export default function DemandChart({ data }: Props) {
   const exportChart = () => {
     if (!ref.current) return;
     Plotly.downloadImage(ref.current, {
-      filename: `panel-checker-${metric}`,
+      filename: `leeps-panel-screening-${metric}`,
       format: 'png',
       width: 1280,
       height: 720

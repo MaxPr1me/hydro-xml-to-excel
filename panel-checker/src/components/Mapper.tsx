@@ -15,7 +15,7 @@ export default function Mapper({ preview, onComplete }: Props) {
     timeColumn: preview.columns[0] ?? '',
     valueColumn: preview.columns[1] ?? '',
     unit: 'kWh',
-    voltage: 120
+    voltage: 240
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +90,7 @@ export default function Mapper({ preview, onComplete }: Props) {
         </label>
 
         <label className="text-sm font-medium text-slate-700">
-          System voltage
+          System voltage <span className="font-normal text-slate-500">(240 V recommended)</span>
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={mapping.voltage}
