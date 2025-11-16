@@ -1,6 +1,6 @@
 import { IntervalDatum, IntervalUnit } from '../types';
 
-const VOLTAGE_DEFAULT: 120 | 208 | 240 = 240;
+const VOLTAGE_DEFAULT: 120 | 208 | 240 = 120;
 
 export function convertToAmps(
   value: number,
@@ -33,6 +33,21 @@ export function toIntervalDatum(
     timestamp,
     value,
     unit,
-    amps: convertToAmps(value, unit, voltage || VOLTAGE_DEFAULT, intervalMinutes)
+    amps: convertToAmps(value, unit, voltage || VOLTAGE_DEFAULT, intervalMinutes),
+    voltage: voltage || VOLTAGE_DEFAULT,
+    intervalMinutes
   };
+}
+
+export function convertToKwh(value: number, unit: IntervalUnit, voltage: number, intervalMinutes: number): number {
+  if (unit === 'kWh') {
+    return value;
+  }
+
+  if (unit === 'kW') {
+    return value * (intervalMinutes / 60);
+  }
+
+  const kw = (value * (voltage || VOLTAGE_DEFAULT)) / 1000;
+  return kw * (intervalMinutes / 60);
 }

@@ -16,37 +16,32 @@ export default function PanelCalculator({ data, onVerdictChange }: Props) {
     mainBreaker: 200,
     busRating: 225,
     voltage: 240,
-    existingLoads: [
-      { id: uuid(), name: 'Existing demand (95th percentile)', amps: demandPercentile(data), continuous: true }
-    ],
+    existingLoads: [],
     newLoads: []
   });
 
-  useEffect(() => {
-    setInputs((prev) => ({
-      ...prev,
-      existingLoads: prev.existingLoads.map((load, index) =>
-        index === 0 ? { ...load, amps: demandPercentile(data) } : load
-      )
-    }));
-  }, [data]);
+  const baseline = useMemo(() => oneYearPeakLoad(data), [data]);
 
-  const verdict = useMemo<PanelVerdict>(() => calculateVerdict(inputs, peakDemand(data)), [inputs, data]);
+  useEffect(() => {
+    setInputs((prev) => {
+      const baseEntry: LoadEntry = {
+        id: prev.existingLoads[0]?.id ?? uuid(),
+        name: 'One-year peak demand (x1.25)',
+        amps: baseline,
+        continuous: false
+      };
+      return {
+        ...prev,
+        existingLoads: [baseEntry, ...prev.existingLoads.slice(1)]
+      };
+    });
+  }, [baseline]);
+
+  const verdict = useMemo<PanelVerdict>(() => calculateVerdict(inputs, baseline), [inputs, baseline]);
 
   useEffect(() => {
     onVerdictChange?.(verdict);
   }, [verdict, onVerdictChange]);
-
-  function demandPercentile(records: IntervalDatum[]) {
-    if (!records.length) return 0;
-    const sorted = [...records.map((item) => item.amps)].sort((a, b) => a - b);
-    const index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
-    return Number(sorted[index].toFixed(1));
-  }
-
-  function peakDemand(records: IntervalDatum[]) {
-    return records.reduce((max, datum) => Math.max(max, datum.amps), 0);
-  }
 
   const addLoad = (list: 'existingLoads' | 'newLoads') => {
     setInputs((prev) => ({
@@ -87,7 +82,9 @@ export default function PanelCalculator({ data, onVerdictChange }: Props) {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Panel calculator</h2>
-          <p className="text-sm text-slate-600">We apply 125% to continuous loads and 100% otherwise.</p>
+          <p className="text-sm text-slate-600">
+            We start from the absolute one-year max (×1.25) and apply 125% to continuous loads, 100% otherwise.
+          </p>
         </div>
         <span className={`rounded-full px-4 py-1 text-sm font-semibold ${verdictBadge}`}>{verdict.status}</span>
       </header>
@@ -128,6 +125,7 @@ export default function PanelCalculator({ data, onVerdictChange }: Props) {
           onChange={(id, value) => updateLoad('existingLoads', id, value)}
           onRemove={(id) => removeLoad('existingLoads', id)}
           total={totalExisting}
+          lockFirst
         />
 
         <LoadList
@@ -156,9 +154,10 @@ interface ListProps {
   onRemove: (id: string) => void;
   onChange: (id: string, value: Partial<LoadEntry>) => void;
   total: number;
+  lockFirst?: boolean;
 }
 
-function LoadList({ title, items, onAdd, onRemove, onChange, total }: ListProps) {
+function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst }: ListProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -173,7 +172,7 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total }: ListProps)
       </div>
 
       <div className="space-y-2">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 text-sm sm:grid-cols-[1fr,120px,100px]">
             <input
               className="rounded-lg border border-slate-200 px-3 py-2"
@@ -198,8 +197,9 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total }: ListProps)
             </label>
             <button
               type="button"
-              className="text-xs font-medium text-rose-600 hover:underline"
+              className={`text-xs font-medium text-rose-600 hover:underline ${lockFirst && index === 0 ? 'pointer-events-none opacity-20' : ''}`}
               onClick={() => onRemove(item.id)}
+              disabled={lockFirst && index === 0}
             >
               Remove
             </button>
@@ -210,4 +210,10 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total }: ListProps)
       <p className="text-xs uppercase tracking-wide text-slate-500">Diversified total: {total.toFixed(1)} A</p>
     </div>
   );
+}
+
+function oneYearPeakLoad(records: IntervalDatum[]) {
+  if (!records.length) return 0;
+  const peak = records.reduce((max, datum) => Math.max(max, datum.amps), 0);
+  return Number((peak * 1.25).toFixed(1));
 }

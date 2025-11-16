@@ -5,6 +5,8 @@ export interface IntervalDatum {
   value: number; // original measurement
   unit: IntervalUnit;
   amps: number; // derived amps
+  voltage: number;
+  intervalMinutes: number;
 }
 
 export interface CsvPreview {
