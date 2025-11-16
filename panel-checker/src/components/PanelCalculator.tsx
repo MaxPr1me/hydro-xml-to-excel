@@ -12,8 +12,8 @@ const serviceSizes = [100, 125, 150, 200, 225, 400];
 
 export default function PanelCalculator({ data, onVerdictChange }: Props) {
   const [inputs, setInputs] = useState<PanelInputs>({
-    serviceRating: 200,
-    mainBreaker: 200,
+    serviceRating: 100,
+    mainBreaker: 100,
     busRating: 225,
     voltage: 240,
     existingLoads: [],

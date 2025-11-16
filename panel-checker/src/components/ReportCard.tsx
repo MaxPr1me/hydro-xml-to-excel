@@ -17,12 +17,17 @@ export default function ReportCard({ data, verdict }: Props) {
       `Coverage: ${stats.start.toISOString()} — ${stats.end.toISOString()}`,
       `Cadence: ${stats.cadenceMinutes} minutes`,
       `Peak amps: ${stats.maxAmps.toFixed(1)}`,
-      `95th percentile: ${stats.percentile95.toFixed(1)}`,
       `Verdict: ${verdict.status}`,
-      `Margin: ${verdict.availableMargin.toFixed(1)} A`,
-      '',
-      'This is a screening tool only. Confirm with a licensed electrician.'
+      `Margin: ${verdict.availableMargin.toFixed(1)} A`
     ];
+    if (verdict.proposedLoads.length) {
+      lines.push('Proposed loads:');
+      verdict.proposedLoads.forEach((load) => {
+        const label = load.name?.trim() || 'Load';
+        lines.push(`- ${label}: ${load.amps} A${load.continuous ? ' (continuous)' : ''}`);
+      });
+    }
+    lines.push('', 'This is a screening tool only. Confirm with a licensed electrician.');
     downloadTextFile('panel-checker-report.txt', lines.join('\n'));
   };
 
@@ -47,10 +52,27 @@ export default function ReportCard({ data, verdict }: Props) {
           <Stat label="Coverage" value={`${stats.start.toLocaleDateString()} — ${stats.end.toLocaleDateString()}`} />
           <Stat label="Cadence" value={`${stats.cadenceMinutes}-minute data`} />
           <Stat label="Peak amps" value={`${stats.maxAmps.toFixed(1)} A`} />
-          <Stat label="95th percentile" value={`${stats.percentile95.toFixed(1)} A`} />
           <Stat label="Verdict" value={`${verdict.status} (${verdict.availableMargin.toFixed(1)} A margin)`} />
         </dl>
       )}
+
+      <div className="rounded-xl border border-slate-200 p-4">
+        <p className="text-xs uppercase tracking-wide text-slate-500">Proposed loads</p>
+        {verdict.proposedLoads.length ? (
+          <ul className="mt-2 space-y-1 text-sm text-slate-700">
+            {verdict.proposedLoads.map((load, index) => (
+              <li key={`${load.name}-${index}`} className="flex items-center justify-between">
+                <span>{load.name?.trim() || 'Load'}</span>
+                <span className="font-semibold text-slate-900">
+                  {load.amps.toFixed(1)} A{load.continuous ? ' (continuous)' : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-slate-600">No what-if loads were added to this scenario.</p>
+        )}
+      </div>
 
       <p className="text-xs text-slate-500">
         Screening tool only — always confirm against the Canadian Electrical Code, NEC, and utility requirements.

@@ -7,11 +7,11 @@ language verdict that summarizes continuous vs. non-continuous loads. This React
 
 ## Features
 
-- ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files with sample data for each format.
+- ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files, converts spreadsheets to CSV for faster parsing, and mirrors the Green Button timezone/multiplier rules with sample data for each format.
 - ✅ Column mapper that validates cadence (15/30/60-minute), enforces a one-year window, and normalizes kWh/kW/Amps to amps using a 120 V default.
 - 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable images.
 - 🧮 Plain-language panel calculator that anchors to the absolute one-year max (×1.25), differentiates continuous vs. non-continuous loads, and lets you stack what-if scenarios.
-- 📄 Download-ready summary plus an installable offline PWA shell.
+- 📄 Download-ready summary that now lists the proposed what-if loads plus an installable offline PWA shell.
 - 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
 
 ## Tech stack

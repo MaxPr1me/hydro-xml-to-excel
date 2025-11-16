@@ -29,14 +29,19 @@ export function calculateVerdict(inputs: PanelInputs, demandAmps: number): Panel
     diversifiedLoad: diversified,
     availableMargin: available,
     status,
-    message
+    message,
+    proposedLoads: inputs.newLoads.map((load) => ({
+      name: load.name,
+      amps: load.amps,
+      continuous: load.continuous
+    }))
   };
 }
 
 export function defaultPanelInputs(): PanelInputs {
   return {
-    serviceRating: 200,
-    mainBreaker: 200,
+    serviceRating: 100,
+    mainBreaker: 100,
     busRating: 225,
     voltage: 240,
     existingLoads: [],

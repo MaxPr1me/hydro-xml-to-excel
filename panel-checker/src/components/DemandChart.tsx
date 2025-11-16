@@ -12,7 +12,6 @@ type Metric = 'amps' | 'kwh';
 
 export default function DemandChart({ data }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [windowMinutes, setWindowMinutes] = useState<15 | 60>(15);
   const [metric, setMetric] = useState<Metric>('amps');
   const stats = useMemo(() => computeDemandStats(data), [data]);
 
@@ -26,20 +25,12 @@ export default function DemandChart({ data }: Props) {
     [data]
   );
 
-  const pointsPerWindow = useMemo(() => {
-    if (!data.length) {
-      return 1;
-    }
-    const cadence = data[0].intervalMinutes || 15;
-    return Math.max(1, Math.round(windowMinutes / cadence));
-  }, [data, windowMinutes]);
-
   useEffect(() => {
     if (!ref.current || !derived.length) {
       return;
     }
 
-    const filtered = pointsPerWindow === 1 ? derived : derived.filter((_, index) => index % pointsPerWindow === 0);
+    const filtered = derived;
     const yLabel = metric === 'amps' ? 'Amps' : 'kWh';
     const hoverSuffix = metric === 'amps' ? 'A' : 'kWh';
     const series = filtered.map((datum) => (metric === 'amps' ? datum.amps : datum.kwh));
@@ -98,7 +89,7 @@ export default function DemandChart({ data }: Props) {
     return () => {
       Plotly.purge(ref.current as HTMLDivElement);
     };
-  }, [derived, metric, pointsPerWindow]);
+  }, [derived, metric]);
 
   const exportChart = () => {
     if (!ref.current) return;
@@ -137,21 +128,11 @@ export default function DemandChart({ data }: Props) {
           >
             kWh
           </button>
-          <span className="ml-4 text-slate-600">Window</span>
-          <button
-            type="button"
-            className={`rounded-full px-3 py-1 ${windowMinutes === 15 ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}
-            onClick={() => setWindowMinutes(15)}
-          >
-            15 min
-          </button>
-          <button
-            type="button"
-            className={`rounded-full px-3 py-1 ${windowMinutes === 60 ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}
-            onClick={() => setWindowMinutes(60)}
-          >
-            Hourly
-          </button>
+          {stats && (
+            <span className="ml-4 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              {stats.cadenceMinutes}-minute cadence
+            </span>
+          )}
           <button
             type="button"
             className="ml-4 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600"

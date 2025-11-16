@@ -83,7 +83,8 @@ export async function parseExcel(buffer: ArrayBuffer): Promise<CsvPreview> {
   const sharedStringsXml = await zip.readText('xl/sharedStrings.xml');
   const sharedStrings = sharedStringsXml ? extractSharedStrings(sharedStringsXml) : [];
   const table = extractRowsFromWorksheet(worksheetXml, sharedStrings);
-  return tableToPreview(table);
+  const csvText = tableToCsv(table);
+  return parseCsv(csvText);
 }
 
 export function parseGreenButtonXml(text: string): CsvPreview {
@@ -93,16 +94,60 @@ export function parseGreenButtonXml(text: string): CsvPreview {
     throw new Error('No interval readings were found in the XML file.');
   }
 
-  const rows = readings.map((node) => {
-    const startSeconds = Number(node.getElementsByTagNameNS(ESPI_NS, 'start')[0]?.textContent ?? '0');
-    const valueWh = Number(node.getElementsByTagNameNS(ESPI_NS, 'value')[0]?.textContent ?? '0');
-    const timestamp = new Date(startSeconds * 1000).toISOString();
-    const kwh = valueWh / 1000;
-    return {
-      timestamp,
-      energy_kwh: kwh.toFixed(4)
-    } satisfies Record<string, string>;
+  const tzOffsetSeconds = Number(doc.getElementsByTagNameNS(ESPI_NS, 'tzOffset')[0]?.textContent ?? '0');
+  const multiplierValue = Number(doc.getElementsByTagNameNS(ESPI_NS, 'powerOfTenMultiplier')[0]?.textContent ?? '0');
+  const scaleFactor = multiplierValue === -6 ? 10 ** multiplierValue : (10 ** multiplierValue) / 1000;
+
+  const unique = new Set<number>();
+  const samples: Array<{ timestampMs: number; kwh: number }> = [];
+
+  readings.forEach((node) => {
+    const startSeconds = Number(node.getElementsByTagNameNS(ESPI_NS, 'start')[0]?.textContent ?? '');
+    const rawValue = Number(node.getElementsByTagNameNS(ESPI_NS, 'value')[0]?.textContent ?? '');
+    if (!Number.isFinite(startSeconds) || !Number.isFinite(rawValue)) {
+      return;
+    }
+    const localizedSeconds = startSeconds + tzOffsetSeconds;
+    const timestampMs = localizedSeconds * 1000;
+    if (unique.has(timestampMs)) {
+      return;
+    }
+    unique.add(timestampMs);
+    samples.push({ timestampMs, kwh: rawValue * scaleFactor });
   });
+
+  if (samples.length < 2) {
+    throw new Error('XML file did not include enough interval readings to analyze.');
+  }
+
+  samples.sort((a, b) => a.timestampMs - b.timestampMs);
+
+  const deltas: number[] = [];
+  for (let i = 1; i < samples.length; i += 1) {
+    const deltaSeconds = (samples[i].timestampMs - samples[i - 1].timestampMs) / 1000;
+    if (deltaSeconds > 0) {
+      deltas.push(deltaSeconds);
+    }
+  }
+
+  if (!deltas.length) {
+    throw new Error('Unable to determine the timestep of the XML data.');
+  }
+
+  const averageDeltaSeconds = Math.round(deltas.reduce((sum, value) => sum + value, 0) / deltas.length);
+  if (averageDeltaSeconds > 60 * 60) {
+    throw new Error(`Data timestep is larger than one hour (${Math.round(averageDeltaSeconds / 60)} minutes).`);
+  }
+
+  const coverageMs = samples[samples.length - 1].timestampMs - samples[0].timestampMs;
+  if (coverageMs < MS_PER_YEAR) {
+    throw new Error('Upload at least one continuous year of interval data.');
+  }
+
+  const rows = samples.map((entry) => ({
+    timestamp: new Date(entry.timestampMs).toISOString(),
+    energy_kwh: entry.kwh.toFixed(4)
+  }));
 
   return { columns: ['timestamp', 'energy_kwh'], rows };
 }
@@ -317,7 +362,7 @@ function columnLabelToIndex(label: string): number {
   return Math.max(0, result - 1);
 }
 
-function tableToPreview(rows: string[][]): CsvPreview {
+function tableToCsv(rows: string[][]): string {
   if (!rows.length) {
     throw new Error('Worksheet is empty.');
   }
@@ -325,18 +370,14 @@ function tableToPreview(rows: string[][]): CsvPreview {
   if (!headers.length) {
     throw new Error('The first row must include headers.');
   }
-  const records = rows
+  const normalizedRows = rows
     .slice(1)
-    .map((cells) => {
-      const record: Record<string, string | undefined> = {};
-      headers.forEach((header, index) => {
-        const value = cells[index];
-        record[header] = value?.toString().trim() ? value.toString() : undefined;
-      });
-      return record;
-    })
-    .filter((record) => headers.some((header) => (record[header]?.length ?? 0) > 0));
-  return { columns: headers, rows: records };
+    .map((cells) => headers.map((_, index) => cells[index]?.toString().trim() ?? ''))
+    .filter((cells) => cells.some((cell) => cell.length));
+  const csvRows = [headers, ...normalizedRows];
+  return csvRows
+    .map((cells) => cells.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .join('\n');
 }
 
 function ensureUniqueHeaders(raw: string[]): string[] {
