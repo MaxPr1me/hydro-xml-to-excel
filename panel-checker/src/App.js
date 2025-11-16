@@ -18,7 +18,9 @@ export default function App() {
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-600">Panel Checker</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-600">
+              LEEP's Electrical Panel Screening Tool - Proven Demand Method
+            </p>
             <p className="text-sm text-slate-500">CSV → validation → charts → calculator → report.</p>
           </div>
           <nav className="flex gap-2">
