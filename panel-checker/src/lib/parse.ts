@@ -287,7 +287,7 @@ function percentile(values: number[], pct: number) {
   return values[idx];
 }
 
-function parseXml(text: string): Document {
+export function parseXml(text: string): Document {
   const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'application/xml');
   if (doc.querySelector('parsererror')) {
@@ -296,7 +296,7 @@ function parseXml(text: string): Document {
   return doc;
 }
 
-function resolveSheetTarget(relsXml: string | null, relId: string | null): string {
+export function resolveSheetTarget(relsXml: string | null, relId: string | null): string {
   if (!relsXml || !relId) {
     return 'xl/worksheets/sheet1.xml';
   }
@@ -311,7 +311,7 @@ function resolveSheetTarget(relsXml: string | null, relId: string | null): strin
   return normalized.startsWith('xl/') ? normalized : `xl/${normalized}`;
 }
 
-function extractSharedStrings(xml: string): string[] {
+export function extractSharedStrings(xml: string): string[] {
   const doc = parseXml(xml);
   const items = Array.from(doc.getElementsByTagName('si'));
   return items.map((item) => {
@@ -323,7 +323,7 @@ function extractSharedStrings(xml: string): string[] {
   });
 }
 
-function extractRowsFromWorksheet(xml: string, sharedStrings: string[]): string[][] {
+export function extractRowsFromWorksheet(xml: string, sharedStrings: string[]): string[][] {
   const doc = parseXml(xml);
   const rows: string[][] = [];
   const rowNodes = Array.from(doc.getElementsByTagName('row'));
@@ -353,7 +353,7 @@ function extractRowsFromWorksheet(xml: string, sharedStrings: string[]): string[
   return rows;
 }
 
-function columnLabelToIndex(label: string): number {
+export function columnLabelToIndex(label: string): number {
   let result = 0;
   for (let i = 0; i < label.length; i += 1) {
     const charCode = label.charCodeAt(i) - 64; // A -> 1
@@ -362,7 +362,7 @@ function columnLabelToIndex(label: string): number {
   return Math.max(0, result - 1);
 }
 
-function tableToCsv(rows: string[][]): string {
+export function tableToCsv(rows: string[][]): string {
   if (!rows.length) {
     throw new Error('Worksheet is empty.');
   }
@@ -380,7 +380,7 @@ function tableToCsv(rows: string[][]): string {
     .join('\n');
 }
 
-function ensureUniqueHeaders(raw: string[]): string[] {
+export function ensureUniqueHeaders(raw: string[]): string[] {
   const counts = new Map<string, number>();
   return raw.map((value, index) => {
     const base = value?.trim() || `Column ${index + 1}`;
@@ -390,7 +390,7 @@ function ensureUniqueHeaders(raw: string[]): string[] {
   });
 }
 
-class SimpleZip {
+export class SimpleZip {
   private readonly buffer: ArrayBuffer;
 
   private readonly view: DataView;
@@ -440,12 +440,11 @@ class SimpleZip {
     const nameLength = this.view.getUint16(offset + 26, true);
     const extraLength = this.view.getUint16(offset + 28, true);
     const dataStart = offset + 30 + nameLength + extraLength;
-    const sliced = this.buffer.slice(dataStart, dataStart + entry.compressedSize);
-    return new Uint8Array(sliced);
+    return new Uint8Array(this.buffer, dataStart, entry.compressedSize);
   }
 }
 
-function parseCentralDirectory(buffer: ArrayBuffer): ZipEntry[] {
+export function parseCentralDirectory(buffer: ArrayBuffer): ZipEntry[] {
   const view = new DataView(buffer);
   const endOffset = findEndOfCentralDirectory(view);
   const directorySize = view.getUint32(endOffset + 12, true);
@@ -473,7 +472,7 @@ function parseCentralDirectory(buffer: ArrayBuffer): ZipEntry[] {
   return entries;
 }
 
-function findEndOfCentralDirectory(view: DataView): number {
+export function findEndOfCentralDirectory(view: DataView): number {
   for (let offset = view.byteLength - 22; offset >= 0; offset -= 1) {
     if (view.getUint32(offset, true) === ZIP_END_OF_CENTRAL_DIRECTORY) {
       return offset;
