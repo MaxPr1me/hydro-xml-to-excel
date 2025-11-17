@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUpTrayIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { CsvPreview } from '../types';
 import { detectFileFormat, parseCsv, parseExcel, parseGreenButtonXml, type FileFormat } from '../lib/parse';
+import { excelBufferToCsv } from '../lib/convert';
 import type { ExcelWorkerResponse } from '../workers/excelParser';
 
 interface Props {
@@ -21,6 +22,8 @@ export default function Uploader({ onPreview }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [allowExcelConversion, setAllowExcelConversion] = useState(false);
+  const [conversionNotice, setConversionNotice] = useState<string | null>(null);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
@@ -44,14 +47,34 @@ export default function Uploader({ onPreview }: Props) {
   }, []);
 
   const parseExcelOffThread = useCallback(
-    async (buffer: ArrayBuffer) => {
+    async (
+      buffer: ArrayBuffer,
+      allowConversion: boolean
+    ): Promise<{ preview: CsvPreview; usedConversion: boolean }> => {
       const worker = ensureWorker();
       if (!worker) {
-        return parseExcel(buffer);
+        try {
+          const preview = await parseExcel(buffer);
+          return { preview, usedConversion: false };
+        } catch (error) {
+          if (!allowConversion) {
+            throw error;
+          }
+          try {
+            const csvText = await excelBufferToCsv(buffer);
+            const preview = parseCsv(csvText);
+            return { preview, usedConversion: true };
+          } catch (conversionError) {
+            const originalMessage = (error as Error)?.message ?? 'Excel parsing failed.';
+            const conversionMessage =
+              (conversionError as Error)?.message ?? 'Excel conversion fallback also failed.';
+            throw new Error(`${originalMessage} ${conversionMessage}`);
+          }
+        }
       }
       jobIdRef.current += 1;
       const jobId = jobIdRef.current;
-      return new Promise<CsvPreview>((resolve, reject) => {
+      return new Promise<{ preview: CsvPreview; usedConversion: boolean }>((resolve, reject) => {
         const timeoutId = window.setTimeout(() => {
           cleanup();
           reject(new Error('Excel parsing timed out. Try again or use a smaller file.'));
@@ -69,7 +92,7 @@ export default function Uploader({ onPreview }: Props) {
           }
           cleanup();
           if (event.data.type === 'success') {
-            resolve(event.data.preview);
+            resolve({ preview: event.data.preview, usedConversion: event.data.usedConversion });
           } else {
             reject(new Error(event.data.message));
           }
@@ -82,7 +105,7 @@ export default function Uploader({ onPreview }: Props) {
 
         worker.addEventListener('message', handleMessage as EventListener);
         worker.addEventListener('error', handleError as EventListener);
-        worker.postMessage({ jobId, buffer }, [buffer]);
+        worker.postMessage({ jobId, buffer, allowConversion }, [buffer]);
       });
     },
     [ensureWorker]
@@ -93,6 +116,7 @@ export default function Uploader({ onPreview }: Props) {
       setError(null);
       setStatusMessage(null);
       setIsLoading(true);
+      setConversionNotice(null);
       try {
         const format = detectFileFormat(file.name, file.type ?? '');
         if (!format) {
@@ -101,11 +125,19 @@ export default function Uploader({ onPreview }: Props) {
         let preview: CsvPreview;
         if (format === 'excel') {
           setStatusMessage('Parsing Excel data…');
-          preview = await parseExcelOffThread(await file.arrayBuffer());
+          const result = await parseExcelOffThread(await file.arrayBuffer(), allowExcelConversion);
+          preview = result.preview;
+          setConversionNotice(
+            result.usedConversion
+              ? 'Excel fallback converted the first worksheet to CSV. Dates and formulas were flattened.'
+              : null
+          );
         } else if (format === 'csv') {
           preview = parseCsv(await file.text());
+          setConversionNotice(null);
         } else {
           preview = parseGreenButtonXml(await file.text());
+          setConversionNotice(null);
         }
         onPreview(preview);
       } catch (err) {
@@ -115,7 +147,7 @@ export default function Uploader({ onPreview }: Props) {
         setIsLoading(false);
       }
     },
-    [onPreview, parseExcelOffThread]
+    [allowExcelConversion, onPreview, parseExcelOffThread]
   );
 
   const onDrop = useCallback(
@@ -145,6 +177,7 @@ export default function Uploader({ onPreview }: Props) {
       setError(null);
       setStatusMessage(null);
       setIsLoading(true);
+      setConversionNotice(null);
       try {
         const filePath = SAMPLE_FILES[format];
         const url = `${import.meta.env.BASE_URL}${encodeURIComponent(filePath)}`;
@@ -155,11 +188,19 @@ export default function Uploader({ onPreview }: Props) {
         let preview: CsvPreview;
         if (format === 'excel') {
           setStatusMessage('Parsing Excel data…');
-          preview = await parseExcelOffThread(await response.arrayBuffer());
+          const result = await parseExcelOffThread(await response.arrayBuffer(), allowExcelConversion);
+          preview = result.preview;
+          setConversionNotice(
+            result.usedConversion
+              ? 'Excel fallback converted the first worksheet to CSV. Dates and formulas were flattened.'
+              : null
+          );
         } else if (format === 'csv') {
           preview = parseCsv(await response.text());
+          setConversionNotice(null);
         } else {
           preview = parseGreenButtonXml(await response.text());
+          setConversionNotice(null);
         }
         onPreview(preview);
       } catch (err) {
@@ -169,7 +210,7 @@ export default function Uploader({ onPreview }: Props) {
         setIsLoading(false);
       }
     },
-    [onPreview, parseExcelOffThread]
+    [allowExcelConversion, onPreview, parseExcelOffThread]
   );
 
   return (
@@ -218,7 +259,25 @@ export default function Uploader({ onPreview }: Props) {
           </button>
         ))}
         {statusMessage && <p className="text-sm text-brand-700">{statusMessage}</p>}
+        {conversionNotice && <p className="text-sm text-amber-600">{conversionNotice}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3">
+        <label className="flex items-start gap-3 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            checked={allowExcelConversion}
+            onChange={(event) => setAllowExcelConversion(event.target.checked)}
+          />
+          <span>
+            <span className="font-semibold text-brand-800">Auto-convert Excel if parsing fails</span>
+            <span className="mt-1 block text-xs text-slate-500">
+              Uses only the first worksheet and flattens formulas/dates into CSV for troubleshooting.
+            </span>
+          </span>
+        </label>
       </div>
     </div>
   );

@@ -17,6 +17,28 @@ data into a confident go/no-go answer that matches the LEEP Proven Demand Method
 - 📄 Download-ready summary that now lists the proposed what-if loads plus an installable offline PWA shell.
 - 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
 
+## Troubleshooting Excel uploads
+
+- The uploader first streams XLSX bytes through the in-browser ZIP/worksheet parser in `src/lib/parse.ts`. This keeps everything
+  offline and preserves timezone or shared-string metadata.
+- Some browsers occasionally block ZIP inflation APIs or strip workbook metadata. When that happens you can enable the
+  **Auto-convert Excel if parsing fails** toggle underneath the uploader. After the first error the worker lazily converts the
+  first worksheet to CSV text and retries with the CSV parser.
+- Conversion flattens formulas, formats, and dates, so the UI surfaces an amber warning whenever the fallback is used. Check your
+  timestamps/values after the retry and, if possible, upload a clean CSV export from the original tool once the issue is
+  resolved.
+
+## Troubleshooting Excel uploads
+
+- The uploader first streams XLSX bytes through the in-browser ZIP/worksheet parser in `src/lib/parse.ts`. This keeps everything
+  offline and preserves timezone or shared-string metadata.
+- Some browsers occasionally block ZIP inflation APIs or strip workbook metadata. When that happens you can enable the
+  **Auto-convert Excel if parsing fails** toggle underneath the uploader. After the first error the worker lazily converts the
+  first worksheet to CSV text and retries with the CSV parser.
+- Conversion flattens formulas, formats, and dates, so the UI surfaces an amber warning whenever the fallback is used. Check your
+  timestamps/values after the retry and, if possible, upload a clean CSV export from the original tool once the issue is
+  resolved.
+
 ## Tech stack
 
 - [Vite](https://vitejs.dev/) + [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
