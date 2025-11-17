@@ -9,6 +9,7 @@ data into a confident go/no-go answer that matches the LEEP Proven Demand Method
 ## Features
 
 - ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files, converts spreadsheets to CSV for faster parsing, and mirrors the Green Button timezone/multiplier rules with sample data for each format.
+- 🧵 XLSX parsing happens inside a dedicated Web Worker (`src/workers/excelParser.ts`) so large spreadsheets do not freeze the UI; the worker shares the `src/lib/parse.ts` helpers and times out after 20 seconds if the browser never responds.
 - ✅ Column mapper that validates cadence (15/30/60-minute), enforces a one-year window, and normalizes kWh/kW/Amps to amps using a 240 V
   recommended default.
 - 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable images.

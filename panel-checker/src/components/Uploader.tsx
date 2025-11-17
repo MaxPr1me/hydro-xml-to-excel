@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUpTrayIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { CsvPreview } from '../types';
 import { detectFileFormat, parseCsv, parseExcel, parseGreenButtonXml, type FileFormat } from '../lib/parse';
+import type { ExcelWorkerResponse } from '../workers/excelParser';
 
 interface Props {
   onPreview: (preview: CsvPreview) => void;
@@ -15,12 +16,82 @@ const SAMPLE_FILES: Record<FileFormat, string> = {
 
 export default function Uploader({ onPreview }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const jobIdRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  useEffect(() => () => workerRef.current?.terminate(), []);
+
+  const ensureWorker = useCallback(() => {
+    if (workerRef.current) {
+      return workerRef.current;
+    }
+    if (typeof Worker === 'undefined') {
+      return null;
+    }
+    try {
+      workerRef.current = new Worker(new URL('../workers/excelParser.ts', import.meta.url), {
+        type: 'module'
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to start Excel worker', err);
+      workerRef.current = null;
+    }
+    return workerRef.current;
+  }, []);
+
+  const parseExcelOffThread = useCallback(
+    async (buffer: ArrayBuffer) => {
+      const worker = ensureWorker();
+      if (!worker) {
+        return parseExcel(buffer);
+      }
+      jobIdRef.current += 1;
+      const jobId = jobIdRef.current;
+      return new Promise<CsvPreview>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          cleanup();
+          reject(new Error('Excel parsing timed out. Try again or use a smaller file.'));
+        }, 20_000);
+
+        const cleanup = () => {
+          worker.removeEventListener('message', handleMessage as EventListener);
+          worker.removeEventListener('error', handleError as EventListener);
+          window.clearTimeout(timeoutId);
+        };
+
+        const handleMessage = (event: MessageEvent<ExcelWorkerResponse>) => {
+          if (event.data?.jobId !== jobId) {
+            return;
+          }
+          cleanup();
+          if (event.data.type === 'success') {
+            resolve(event.data.preview);
+          } else {
+            reject(new Error(event.data.message));
+          }
+        };
+
+        const handleError = (event: ErrorEvent) => {
+          cleanup();
+          reject(new Error(event.message || 'Excel worker crashed.'));
+        };
+
+        worker.addEventListener('message', handleMessage as EventListener);
+        worker.addEventListener('error', handleError as EventListener);
+        worker.postMessage({ jobId, buffer }, [buffer]);
+      });
+    },
+    [ensureWorker]
+  );
 
   const handleFiles = useCallback(
     async (file: File) => {
       setError(null);
+      setStatusMessage(null);
       setIsLoading(true);
       try {
         const format = detectFileFormat(file.name, file.type ?? '');
@@ -29,7 +100,8 @@ export default function Uploader({ onPreview }: Props) {
         }
         let preview: CsvPreview;
         if (format === 'excel') {
-          preview = await parseExcel(await file.arrayBuffer());
+          setStatusMessage('Parsing Excel data…');
+          preview = await parseExcelOffThread(await file.arrayBuffer());
         } else if (format === 'csv') {
           preview = parseCsv(await file.text());
         } else {
@@ -39,10 +111,11 @@ export default function Uploader({ onPreview }: Props) {
       } catch (err) {
         setError((err as Error).message || 'Unable to parse the file.');
       } finally {
+        setStatusMessage(null);
         setIsLoading(false);
       }
     },
-    [onPreview]
+    [onPreview, parseExcelOffThread]
   );
 
   const onDrop = useCallback(
@@ -70,6 +143,7 @@ export default function Uploader({ onPreview }: Props) {
   const loadSample = useCallback(
     async (format: FileFormat) => {
       setError(null);
+      setStatusMessage(null);
       setIsLoading(true);
       try {
         const filePath = SAMPLE_FILES[format];
@@ -80,7 +154,8 @@ export default function Uploader({ onPreview }: Props) {
         }
         let preview: CsvPreview;
         if (format === 'excel') {
-          preview = await parseExcel(await response.arrayBuffer());
+          setStatusMessage('Parsing Excel data…');
+          preview = await parseExcelOffThread(await response.arrayBuffer());
         } else if (format === 'csv') {
           preview = parseCsv(await response.text());
         } else {
@@ -90,10 +165,11 @@ export default function Uploader({ onPreview }: Props) {
       } catch (err) {
         setError((err as Error).message || 'Unable to load the sample file.');
       } finally {
+        setStatusMessage(null);
         setIsLoading(false);
       }
     },
-    [onPreview]
+    [onPreview, parseExcelOffThread]
   );
 
   return (
@@ -141,6 +217,7 @@ export default function Uploader({ onPreview }: Props) {
             {format.toUpperCase()}
           </button>
         ))}
+        {statusMessage && <p className="text-sm text-brand-700">{statusMessage}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
     </div>
