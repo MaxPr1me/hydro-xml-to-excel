@@ -1,16 +1,19 @@
 /// <reference lib="webworker" />
-import { parseExcel } from '../lib/parse';
+import { excelBufferToCsv } from '../lib/convert';
+import { parseCsv, parseExcel } from '../lib/parse';
 import type { CsvPreview } from '../types';
 
 export interface ExcelWorkerRequest {
   jobId: number;
   buffer: ArrayBuffer;
+  allowConversion: boolean;
 }
 
 export type ExcelWorkerSuccess = {
   jobId: number;
   type: 'success';
   preview: CsvPreview;
+  usedConversion: boolean;
 };
 
 export type ExcelWorkerError = {
@@ -24,12 +27,35 @@ export type ExcelWorkerResponse = ExcelWorkerSuccess | ExcelWorkerError;
 const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
 
 ctx.onmessage = async (event: MessageEvent<ExcelWorkerRequest>) => {
-  const { jobId, buffer } = event.data;
+  const { jobId, buffer, allowConversion } = event.data;
   try {
     const preview = await parseExcel(buffer);
-    const payload: ExcelWorkerSuccess = { jobId, type: 'success', preview };
+    const payload: ExcelWorkerSuccess = { jobId, type: 'success', preview, usedConversion: false };
     ctx.postMessage(payload);
   } catch (error) {
+    if (allowConversion) {
+      try {
+        const csvText = await excelBufferToCsv(buffer);
+        const preview = parseCsv(csvText);
+        const payload: ExcelWorkerSuccess = {
+          jobId,
+          type: 'success',
+          preview,
+          usedConversion: true
+        };
+        ctx.postMessage(payload);
+        return;
+      } catch (conversionError) {
+        const payload: ExcelWorkerError = {
+          jobId,
+          type: 'error',
+          message:
+            (conversionError as Error)?.message ?? 'Excel conversion fallback could not parse the file.'
+        };
+        ctx.postMessage(payload);
+        return;
+      }
+    }
     const payload: ExcelWorkerError = {
       jobId,
       type: 'error',
