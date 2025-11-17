@@ -17,16 +17,11 @@ data into a confident go/no-go answer that matches the LEEP Proven Demand Method
 - 📄 Download-ready summary that now lists the proposed what-if loads plus an installable offline PWA shell.
 - 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
 
-## Troubleshooting Excel uploads
+## Uploading interval data
 
-- The uploader first streams XLSX bytes through the in-browser ZIP/worksheet parser in `src/lib/parse.ts`. This keeps everything
-  offline and preserves timezone or shared-string metadata.
-- Some browsers occasionally block ZIP inflation APIs or strip workbook metadata. When that happens you can enable the
-  **Auto-convert Excel if parsing fails** toggle underneath the uploader. After the first error the worker lazily converts the
-  first worksheet to CSV text and retries with the CSV parser.
-- Conversion flattens formulas, formats, and dates, so the UI surfaces an amber warning whenever the fallback is used. Check your
-  timestamps/values after the retry and, if possible, upload a clean CSV export from the original tool once the issue is
-  resolved.
+- **CSV uploads must stay plain text.** The uploader expects standard comma-separated text (UTF-8 or ASCII). Zipped CSVs, binary Excel exports, or files that were renamed from `.xlsx` to `.csv` will fail because the parser streams the file line-by-line.
+- **XLSX files are parsed in a worker.** Dragging an Excel workbook keeps you offline—the Web Worker inflates the ZIP, walks the worksheets, and streams the first sheet into the shared parsing helpers. Renaming a CSV to `.xlsx` does not gain any formatting support; the worker will surface an error as soon as it tries to unzip the fake workbook.
+- **Green Button XML follows the official spec.** The parser keeps the timezone offset, multiplier, and quality flags intact so the mapper receives the raw values your utility provided.
 
 ## Troubleshooting Excel uploads
 
@@ -35,9 +30,10 @@ data into a confident go/no-go answer that matches the LEEP Proven Demand Method
 - Some browsers occasionally block ZIP inflation APIs or strip workbook metadata. When that happens you can enable the
   **Auto-convert Excel if parsing fails** toggle underneath the uploader. After the first error the worker lazily converts the
   first worksheet to CSV text and retries with the CSV parser.
-- Conversion flattens formulas, formats, and dates, so the UI surfaces an amber warning whenever the fallback is used. Check your
-  timestamps/values after the retry and, if possible, upload a clean CSV export from the original tool once the issue is
-  resolved.
+- Conversion flattens formulas, formats, and dates, so the UI surfaces an amber warning whenever the fallback is used. Only the
+  first worksheet is converted, formula cells are evaluated once (no relative references), and Excel number formats may round the
+  exported text. Check your timestamps/values after the retry and, if possible, upload a clean CSV export from the original tool
+  once the issue is resolved.
 
 ## Tech stack
 
