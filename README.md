@@ -77,7 +77,7 @@ order; check off each step before moving on.
 8. **Enable GitHub Pages.** In your fork, open **Settings → Pages**. Under **Build and deployment**, choose **Source: GitHub
    Actions**. Save.
 9. **Review the workflow.** GitHub automatically picks up `.github/workflows/deploy-panel-checker.yml`, installs Node 20, runs
-   `npm ci`, builds the site, and uploads `panel-checker/dist` as the artifact GitHub Pages serves.
+   `npm ci && npm run build` inside `panel-checker/`, and uploads `panel-checker/dist` as the artifact GitHub Pages serves.
 10. **Watch the deployment.** Go to the **Actions** tab, open the "Deploy panel-checker to Pages" workflow run, and wait for the
     green check marks. The **deploy** job shows the published URL (usually
     `https://<your-username>.github.io/<repo-name>/`).
