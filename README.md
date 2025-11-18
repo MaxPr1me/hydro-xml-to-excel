@@ -65,7 +65,8 @@ order; check off each step before moving on.
    `node -v` works.
 4. **Install dependencies.** Run `cd panel-checker && npm install`. This grabs React, Vite, Plotly, etc.
 5. **Create a production build.** Still inside `panel-checker`, run `npm run build`. The command performs a strict type-check and
-   outputs the static site under `panel-checker/dist`.
+   outputs the static site under `panel-checker/dist`. Vite is pinned to `base: './'` in `vite.config.ts`, so the generated `index.html`
+   and assets all use relative URLs that keep working when GitHub Pages serves them from `https://<user>.github.io/<repo>/`.
 6. **Verify the build folder.** Run `ls dist` (while still inside `panel-checker`). You should see `index.html`, `assets/`, and a
    `manifest.webmanifest`. If the folder is missing, rerun step 5 and fix any red error text.
 7. **Commit your work.** From the repo root, run `git add panel-checker && git commit -m "Build panel-checker"` and push it with
@@ -82,6 +83,22 @@ order; check off each step before moving on.
     handy and confirm that the chart, calculator, and report tabs load.
 12. **Repeat after changes.** Every push to `main` reruns the workflow. If you make a major UI or build change, ensure the README
     and this runbook stay accurate (see `AGENTS.md`).
+
+## Preview the GitHub Pages path locally
+
+GitHub Pages hosts this Vite build under a `/hydro-xml-to-excel/` subpath (or the name of your fork). Because the app now emits
+relative URLs you can mimic that subpath locally before pushing:
+
+```bash
+cd panel-checker
+npm install
+npm run build
+npm run preview -- --base=/hydro-xml-to-excel/
+```
+
+Replace `hydro-xml-to-excel` with your repository name if you forked the project. Visiting the preview URL at
+`http://localhost:4173/hydro-xml-to-excel/` mirrors how GitHub Pages serves the production site and confirms that icons, manifest
+links, and bundled JavaScript load from the correct relative paths.
 
 ## Repository layout
 
