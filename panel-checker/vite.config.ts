@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: '/hydro-xml-to-excel/panel-checker/',
+  base: './',
   plugins: [
     react(),
     VitePWA({
@@ -19,7 +19,7 @@ export default defineConfig({
         theme_color: '#021b33',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/hydro-xml-to-excel/panel-checker/',
+        start_url: './',
         icons: [
           {
             src: 'icon.svg',
