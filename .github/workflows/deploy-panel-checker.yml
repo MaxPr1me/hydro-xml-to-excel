@@ -2,7 +2,7 @@ name: Deploy Panel Checker to Pages
 
 on:
   push:
-    branches: ["main", "work"]
+    branches: ["ns"]
   workflow_dispatch:
 
 permissions:
