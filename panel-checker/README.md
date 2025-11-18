@@ -65,8 +65,10 @@ order; check off each step before moving on.
    `node -v` works.
 4. **Install dependencies.** Run `cd panel-checker && npm install`. This grabs React, Vite, Plotly, etc.
 5. **Create a production build.** Still inside `panel-checker`, run `npm run build`. The command performs a strict type-check and
-   outputs the static site under `panel-checker/dist`. Vite is pinned to `base: './'` in `vite.config.ts`, so the generated `index.html`
-   and assets all use relative URLs that keep working when GitHub Pages serves them from `https://<user>.github.io/<repo>/`.
+   outputs the static site under `panel-checker/dist`. Vite is pinned to `base: '/hydro-xml-to-excel/panel-checker/'` in `vite.config.ts`
+   and `vite.config.js`, so the generated `index.html`/manifests use the exact GitHub Pages path the workflow deploys. If you rename
+   the repository or publish from a fork, update that `base` (and the PWA `start_url`) to match your final `/repo-name/panel-checker/`
+   URL before rebuilding.
 6. **Verify the build folder.** Run `ls dist` (while still inside `panel-checker`). You should see `index.html`, `assets/`, and a
    `manifest.webmanifest`. If the folder is missing, rerun step 5 and fix any red error text.
 7. **Commit your work.** From the repo root, run `git add panel-checker && git commit -m "Build panel-checker"` and push it with
@@ -93,12 +95,12 @@ relative URLs you can mimic that subpath locally before pushing:
 cd panel-checker
 npm install
 npm run build
-npm run preview -- --base=/hydro-xml-to-excel/
+npm run preview -- --base=/hydro-xml-to-excel/panel-checker/
 ```
 
-Replace `hydro-xml-to-excel` with your repository name if you forked the project. Visiting the preview URL at
-`http://localhost:4173/hydro-xml-to-excel/` mirrors how GitHub Pages serves the production site and confirms that icons, manifest
-links, and bundled JavaScript load from the correct relative paths.
+Replace `hydro-xml-to-excel` with your repository name if you forked the project (the trailing `/panel-checker/` must stay). Visiting
+the preview URL at `http://localhost:4173/hydro-xml-to-excel/panel-checker/` mirrors how GitHub Pages serves the production site and
+confirms that icons, manifest links, and bundled JavaScript load from the correct absolute paths.
 
 ## Repository layout
 
