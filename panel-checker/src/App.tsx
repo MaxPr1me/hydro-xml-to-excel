@@ -1,25 +1,24 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Results from './pages/Results';
 import { IntervalDatum } from './types';
 
 const tabs = [
-  { id: 'upload', label: 'Upload & validate' },
-  { id: 'results', label: 'Results' }
+  { id: 'upload', label: 'Upload & validate', path: '/' },
+  { id: 'results', label: 'Results', path: '/results' }
 ] as const;
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]['id']>('upload');
   const [data, setData] = useState<IntervalDatum[]>([]);
+  const navigate = useNavigate();
 
-  const actions = useMemo(
-    () => ({
-      onData: (records: IntervalDatum[]) => {
-        setData(records);
-        setActiveTab('results');
-      }
-    }),
-    []
+  const handleData = useCallback(
+    (records: IntervalDatum[]) => {
+      setData(records);
+      navigate('/results');
+    },
+    [navigate]
   );
 
   return (
@@ -52,24 +51,28 @@ export default function App() {
 
           <nav className="flex flex-wrap gap-3">
             {tabs.map((tab) => (
-              <button
+              <NavLink
                 key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  activeTab === tab.id
-                    ? 'bg-white text-brand-900 shadow'
-                    : 'bg-white/10 text-brand-100 hover:bg-white/20'
-                }`}
+                to={tab.path}
+                end={tab.path === '/'}
+                className={({ isActive }) =>
+                  `rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    isActive ? 'bg-white text-brand-900 shadow' : 'bg-white/10 text-brand-100 hover:bg-white/20'
+                  }`
+                }
               >
                 {tab.label}
-              </button>
+              </NavLink>
             ))}
           </nav>
         </div>
       </header>
 
-      {activeTab === 'upload' ? <Home onData={actions.onData} /> : <Results data={data} />}
+      <Routes>
+        <Route path="/" element={<Home onData={handleData} />} />
+        <Route path="/results" element={<Results data={data} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       <footer className="bg-brand-900/90 text-brand-100">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-xs">
