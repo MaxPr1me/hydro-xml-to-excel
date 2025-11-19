@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import Plotly from 'plotly.js-dist-min';
 import { IntervalDatum } from '../types';
 import { computeDemandStats } from '../lib/parse';
@@ -6,12 +6,14 @@ import { convertToKwh } from '../lib/units';
 
 interface Props {
   data: IntervalDatum[];
+  chartRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
 type Metric = 'amps' | 'kwh';
 
-export default function DemandChart({ data }: Props) {
-  const ref = useRef<HTMLDivElement | null>(null);
+export default function DemandChart({ data, chartRef }: Props) {
+  const fallbackRef = useRef<HTMLDivElement | null>(null);
+  const ref = chartRef ?? fallbackRef;
   const [metric, setMetric] = useState<Metric>('amps');
   const stats = useMemo(() => computeDemandStats(data), [data]);
 
@@ -25,11 +27,10 @@ export default function DemandChart({ data }: Props) {
     [data]
   );
 
-  useEffect(() => {
-    if (!ref.current || !derived.length) {
-      return;
+  const chartDefinition = useMemo(() => {
+    if (!derived.length) {
+      return null;
     }
-
     const filtered = derived;
     const yLabel = metric === 'amps' ? 'Amps' : 'kWh';
     const hoverSuffix = metric === 'amps' ? 'A' : 'kWh';
@@ -46,6 +47,7 @@ export default function DemandChart({ data }: Props) {
     );
 
     const trace: Plotly.Data = {
+      name: metric === 'amps' ? 'Amps' : 'kWh',
       x: filtered.map((datum) => datum.timestamp),
       y: series,
       type: 'scatter',
@@ -57,6 +59,7 @@ export default function DemandChart({ data }: Props) {
     const peakTrace =
       peak.timestamp !== null
         ? ({
+            name: 'Peak marker',
             x: [peak.timestamp],
             y: [peak.value],
             type: 'scatter',
@@ -74,30 +77,43 @@ export default function DemandChart({ data }: Props) {
       plot_bgcolor: 'rgba(255,255,255,0)',
       xaxis: { title: 'Time', automargin: true },
       yaxis: { title: yLabel, rangemode: 'tozero', automargin: true },
-      showlegend: false,
+      showlegend: true,
+      legend: { orientation: 'h', x: 0, y: 1.15 },
       font: { family: 'Inter, sans-serif', color: '#021b33' }
     };
 
     const traces: Plotly.Data[] = peakTrace ? [trace, peakTrace] : [trace];
+    return { data: traces, layout };
+  }, [derived, metric]);
 
-    Plotly.newPlot(ref.current, traces, layout, {
+  const chartConfig = useMemo(
+    () => ({
       responsive: true,
       displaylogo: false,
-      modeBarButtonsToRemove: ['select2d', 'lasso2d']
-    });
+      modeBarButtonsToRemove: ['select2d', 'lasso2d'] as Plotly.ModeBarDefaultButtons[]
+    }),
+    []
+  );
 
+  useEffect(() => {
+    if (!ref.current || !chartDefinition) {
+      return;
+    }
+    Plotly.newPlot(ref.current, chartDefinition.data, chartDefinition.layout, chartConfig);
     return () => {
-      Plotly.purge(ref.current as HTMLDivElement);
+      if (ref.current) {
+        Plotly.purge(ref.current);
+      }
     };
-  }, [derived, metric]);
+  }, [chartDefinition, chartConfig, ref]);
 
   const exportChart = () => {
     if (!ref.current) return;
     Plotly.downloadImage(ref.current, {
       filename: `leeps-panel-screening-${metric}`,
       format: 'png',
-      width: 1280,
-      height: 720
+      width: 1600,
+      height: 900
     });
   };
 

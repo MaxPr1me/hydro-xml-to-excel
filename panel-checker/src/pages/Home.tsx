@@ -1,17 +1,22 @@
 import { useState } from 'react';
 import Uploader from '../components/Uploader';
 import Mapper from '../components/Mapper';
-import { CsvPreview, IntervalDatum } from '../types';
+import { AnalysisState, CsvPreview, IntervalDatum } from '../types';
 import type { MappingResult } from '../lib/parse';
 import { textEn } from '../content/text';
+import { convertToAmps } from '../lib/units';
 
 interface Props {
-  onData: (data: IntervalDatum[]) => void;
+  onAnalysisReady: (analysis: AnalysisState) => void;
 }
 
-export default function Home({ onData }: Props) {
+export default function Home({ onAnalysisReady }: Props) {
   const [preview, setPreview] = useState<CsvPreview | null>(null);
   const [result, setResult] = useState<MappingResult | null>(null);
+  const [manualPeakKwh, setManualPeakKwh] = useState('');
+  const [manualCadence, setManualCadence] = useState(15);
+  const [manualVoltage, setManualVoltage] = useState<120 | 208 | 240>(240);
+  const [manualError, setManualError] = useState<string | null>(null);
 
   const handlePreview = (parsed: CsvPreview) => {
     setPreview(parsed);
@@ -20,7 +25,29 @@ export default function Home({ onData }: Props) {
 
   const handleMapping = (mappingResult: MappingResult) => {
     setResult(mappingResult);
-    onData(mappingResult.data);
+    onAnalysisReady({ source: 'file', data: mappingResult.data });
+  };
+
+  const handleManualSubmit = () => {
+    const parsed = Number(manualPeakKwh);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setManualError('Enter a positive number for the peak kWh value.');
+      return;
+    }
+    setManualError(null);
+    const amps = convertToAmps(parsed, 'kWh', manualVoltage, manualCadence);
+    setPreview(null);
+    setResult(null);
+    onAnalysisReady({
+      source: 'manual',
+      data: [],
+      manualPeak: {
+        kwh: parsed,
+        intervalMinutes: manualCadence,
+        voltage: manualVoltage,
+        amps: Number(amps.toFixed(2))
+      }
+    });
   };
 
   return (
@@ -41,6 +68,74 @@ export default function Home({ onData }: Props) {
       </section>
 
       <Uploader onPreview={handlePreview} />
+
+      <section className="rounded-3xl border border-dashed border-slate-300 bg-white/70 p-6 text-sm text-slate-700">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-700">No file handy?</p>
+          <h3 className="text-xl font-semibold text-slate-900">Jump straight to the calculator</h3>
+          <p>
+            Confirmed customers occasionally provide only their absolute peak interval reading. Enter that verified kWh value
+            and cadence to run the calculator without uploading a file. The demand chart will be disabled and results will be
+            flagged as unverified user input.
+          </p>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-4">
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Peak interval energy (kWh)
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={manualPeakKwh}
+              onChange={(event) => setManualPeakKwh(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              placeholder="e.g. 3.25"
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Interval cadence
+            <select
+              value={manualCadence}
+              onChange={(event) => setManualCadence(Number(event.target.value))}
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            >
+              {[15, 30, 60].map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {minutes}-minute data
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Service voltage
+            <select
+              value={manualVoltage}
+              onChange={(event) => setManualVoltage(Number(event.target.value) as 120 | 208 | 240)}
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            >
+              {[120, 208, 240].map((voltage) => (
+                <option key={voltage} value={voltage}>
+                  {voltage} V
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex items-end">
+            <button
+              type="button"
+              className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow"
+              onClick={handleManualSubmit}
+            >
+              Use manual peak
+            </button>
+          </div>
+        </div>
+        {manualError && <p className="mt-3 text-sm text-rose-600">{manualError}</p>}
+        <p className="mt-4 text-xs text-slate-500">
+          Disclaimer: This path never generates a graph. The calculator will mark the run as user-supplied data only, so include
+          proof of the interval reading when submitting to a utility or AHJ.
+        </p>
+      </section>
       {preview && <Mapper preview={preview} onComplete={handleMapping} />}
       {result && (
         <div className="rounded-2xl bg-[#FFC933]/20 p-4 text-sm text-[#0F2941]">
