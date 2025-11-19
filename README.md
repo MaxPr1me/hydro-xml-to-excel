@@ -96,8 +96,8 @@ order; check off each step before moving on.
     `https://<your-username>.github.io/<repo-name>/`).
 11. **Test the site.** Visit the published URL in a new browser tab. Upload a CSV/XML/XLSX interval file or use the manual peak
     entry path to confirm that the chart (when data exists), calculator, and PDF report all load.
-12. **Repeat after changes.** Every push to `main` reruns the workflow. If you make a major UI or build change, ensure the README
-    and this runbook stay accurate (see `AGENTS.md`).
+12. **Repeat after changes.** Every push to your repository's default branch reruns the workflow. If you make a major UI or build
+    change, ensure the README and this runbook stay accurate (see `AGENTS.md`).
 
 ## Preview the GitHub Pages path locally
 

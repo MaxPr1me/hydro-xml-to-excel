@@ -8,6 +8,8 @@ Scope: entire repository.
 - When the GitHub Pages workflow, npm scripts, or directory layout change, update `.github/workflows/*.yml`, this file, and the
   README together so instructions never drift.
 - Prefer TypeScript sources; do not commit build outputs (`dist/`, `tsconfig*.tsbuildinfo`).
+- Keep URLs, workflow triggers, and metadata fork-friendly: prefer relative links, resolve branches via the repo default, and avoid
+  hard-coding org/user names or site hosts.
 
 ## Self-update policy
 
@@ -21,3 +23,5 @@ changed and why. This keeps future agents oriented.
 - 2025-11-18 – Locked Vite's base to `./` so GitHub Pages serves relative assets, updated README runbook + preview steps.
 - 2025-11-19 – GitHub Pages workflow now runs `npm ci && npm run build` in one step and README runbook mirrors the combined command.
 - 2025-11-20 – Vite base switched to `./`, BrowserRouter basename now resolves at runtime, and docs updated so forks deploy to GitHub Pages without manual path edits.
+- 2025-11-21 – GitHub Pages workflow now targets the repo's default branch and app metadata uses relative URLs for forks.
+- 2025-11-22 – Added fork-friendly coding policy to keep branches, URLs, and org names dynamic.
