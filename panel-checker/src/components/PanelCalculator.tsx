@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 import { calculateVerdict, diversifiedLoad } from '../lib/calc';
-import { IntervalDatum, LoadEntry, PanelInputs, PanelVerdict } from '../types';
+import { AnalysisState, IntervalDatum, LoadEntry, PanelInputs, PanelVerdict } from '../types';
 
 interface Props {
-  data: IntervalDatum[];
+  analysis: AnalysisState;
   onVerdictChange?: (verdict: PanelVerdict) => void;
 }
 
 const serviceSizes = [100, 125, 150, 200, 225, 400];
 
-export default function PanelCalculator({ data, onVerdictChange }: Props) {
+export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
   const [inputs, setInputs] = useState<PanelInputs>({
     serviceRating: 100,
     mainBreaker: 100,
@@ -20,13 +20,19 @@ export default function PanelCalculator({ data, onVerdictChange }: Props) {
     newLoads: []
   });
 
-  const baseline = useMemo(() => oneYearPeakLoad(data), [data]);
+  const manualMode = analysis.source === 'manual' && !!analysis.manualPeak;
+  const baseline = useMemo(() => {
+    if (manualMode && analysis.manualPeak) {
+      return Number((analysis.manualPeak.amps * 1.25).toFixed(1));
+    }
+    return oneYearPeakLoad(analysis.data);
+  }, [analysis, manualMode]);
 
   useEffect(() => {
     setInputs((prev) => {
       const baseEntry: LoadEntry = {
         id: prev.existingLoads[0]?.id ?? uuid(),
-        name: 'One-year peak demand (x1.25)',
+        name: manualMode ? 'Manual peak demand (user input ×1.25)' : 'One-year peak demand (×1.25)',
         amps: baseline,
         continuous: false
       };
@@ -35,7 +41,15 @@ export default function PanelCalculator({ data, onVerdictChange }: Props) {
         existingLoads: [baseEntry, ...prev.existingLoads.slice(1)]
       };
     });
-  }, [baseline]);
+  }, [baseline, manualMode]);
+
+  useEffect(() => {
+    if (!manualMode || !analysis.manualPeak) {
+      return;
+    }
+    const manualVoltage = analysis.manualPeak.voltage;
+    setInputs((prev) => (prev.voltage === manualVoltage ? prev : { ...prev, voltage: manualVoltage }));
+  }, [analysis, manualMode]);
 
   const verdict = useMemo<PanelVerdict>(() => calculateVerdict(inputs, baseline), [inputs, baseline]);
 
@@ -83,7 +97,9 @@ export default function PanelCalculator({ data, onVerdictChange }: Props) {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Panel calculator</h2>
           <p className="text-sm text-slate-600">
-            We start from the absolute one-year max (×1.25) and apply 125% to continuous loads, 100% otherwise.
+            {manualMode
+              ? 'Using a user-entered peak interval (converted to amps ×1.25). Treat these results as provisional until verified with interval data.'
+              : 'We start from the absolute one-year max (×1.25) and apply 125% to continuous loads, 100% otherwise.'}
           </p>
         </div>
         <span className={`rounded-full px-4 py-1 text-sm font-semibold ${verdictBadge}`}>{verdict.status}</span>

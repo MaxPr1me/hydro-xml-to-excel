@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Results from './pages/Results';
-import { IntervalDatum } from './types';
+import { AnalysisState } from './types';
 import { textEn } from './content/text';
 
 const tabs = [
@@ -11,13 +11,13 @@ const tabs = [
 ] as const;
 
 export default function App() {
-  const [data, setData] = useState<IntervalDatum[]>([]);
+  const [analysis, setAnalysis] = useState<AnalysisState>({ source: 'none', data: [] });
   const navigate = useNavigate();
   const sparkLogoUrl = `${import.meta.env.BASE_URL}spark-logo.svg`;
 
-  const handleData = useCallback(
-    (records: IntervalDatum[]) => {
-      setData(records);
+  const handleAnalysisReady = useCallback(
+    (payload: AnalysisState) => {
+      setAnalysis(payload);
       navigate('/results');
     },
     [navigate]
@@ -73,8 +73,8 @@ export default function App() {
       </header>
 
       <Routes>
-        <Route path="/" element={<Home onData={handleData} />} />
-        <Route path="/results" element={<Results data={data} />} />
+        <Route path="/" element={<Home onAnalysisReady={handleAnalysisReady} />} />
+        <Route path="/results" element={<Results analysis={analysis} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
@@ -82,6 +82,12 @@ export default function App() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-xs">
           <p>{textEn.footer.pwa}</p>
           <p>{textEn.footer.bilingual}</p>
+          <p>
+            Contact us:{' '}
+            <a href="mailto:leep@nrcan-rncan.gc.ca" className="font-semibold underline">
+              leep@nrcan-rncan.gc.ca
+            </a>
+          </p>
         </div>
       </footer>
     </div>

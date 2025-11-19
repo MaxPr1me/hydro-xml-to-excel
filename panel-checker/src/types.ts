@@ -9,6 +9,21 @@ export interface IntervalDatum {
   intervalMinutes: number;
 }
 
+export type AnalysisSource = 'none' | 'file' | 'manual';
+
+export interface ManualPeakEstimate {
+  kwh: number;
+  intervalMinutes: number;
+  voltage: 120 | 208 | 240;
+  amps: number;
+}
+
+export interface AnalysisState {
+  source: AnalysisSource;
+  data: IntervalDatum[];
+  manualPeak?: ManualPeakEstimate | null;
+}
+
 export interface CsvPreview {
   columns: string[];
   rows: Record<string, string | undefined>[];

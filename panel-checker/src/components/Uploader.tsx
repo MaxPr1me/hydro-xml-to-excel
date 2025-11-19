@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUpTrayIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { ArrowUpTrayIcon /* , DocumentArrowDownIcon */ } from '@heroicons/react/24/outline';
 import { CsvPreview } from '../types';
 import { detectFileFormat, parseCsv, parseExcel, parseGreenButtonXml, type FileFormat } from '../lib/parse';
 import { excelBufferToCsv } from '../lib/convert';
@@ -9,11 +9,15 @@ interface Props {
   onPreview: (preview: CsvPreview) => void;
 }
 
-const SAMPLE_FILES: Record<FileFormat, string> = {
-  csv: 'sample-15min.csv',
-  excel: 'NSP interval data.xlsx',
-  xml: 'NSPI_Electric_15_Minutes_01-01-2024_12-31-2024.XML'
-};
+/*
+ * Try Sample data downloads are temporarily disabled on the front page to encourage verified data uploads.
+ * Keeping the file manifest for future reference:
+ * const SAMPLE_FILES: Record<FileFormat, string> = {
+ *   csv: 'sample-15min.csv',
+ *   excel: 'NSP interval data.xlsx',
+ *   xml: 'NSPI_Electric_15_Minutes_01-01-2024_12-31-2024.XML'
+ * };
+ */
 
 export default function Uploader({ onPreview }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -172,46 +176,10 @@ export default function Uploader({ onPreview }: Props) {
     [handleFiles]
   );
 
-  const loadSample = useCallback(
-    async (format: FileFormat) => {
-      setError(null);
-      setStatusMessage(null);
-      setIsLoading(true);
-      setConversionNotice(null);
-      try {
-        const filePath = SAMPLE_FILES[format];
-        const url = `${import.meta.env.BASE_URL}${encodeURIComponent(filePath)}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error('Unable to load the sample file.');
-        }
-        let preview: CsvPreview;
-        if (format === 'excel') {
-          setStatusMessage('Parsing Excel data…');
-          const result = await parseExcelOffThread(await response.arrayBuffer(), allowExcelConversion);
-          preview = result.preview;
-          setConversionNotice(
-            result.usedConversion
-              ? 'Excel fallback converted the first worksheet to CSV. Dates and formulas were flattened.'
-              : null
-          );
-        } else if (format === 'csv') {
-          preview = parseCsv(await response.text());
-          setConversionNotice(null);
-        } else {
-          preview = parseGreenButtonXml(await response.text());
-          setConversionNotice(null);
-        }
-        onPreview(preview);
-      } catch (err) {
-        setError((err as Error).message || 'Unable to load the sample file.');
-      } finally {
-        setStatusMessage(null);
-        setIsLoading(false);
-      }
-    },
-    [allowExcelConversion, onPreview, parseExcelOffThread]
-  );
+  /*
+   * Legacy Try Sample handler left intact for future reactivation.
+   * const loadSample = useCallback(async (format: FileFormat) => { ... }, []);
+   */
 
   return (
     <div className="space-y-4">
@@ -244,20 +212,7 @@ export default function Uploader({ onPreview }: Props) {
         />
       </label>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Try sample:</span>
-        {(['csv', 'excel', 'xml'] as FileFormat[]).map((format) => (
-          <button
-            key={format}
-            type="button"
-            className="inline-flex items-center gap-2 rounded-full border border-brand-600 px-4 py-2 text-sm font-semibold text-brand-700"
-            onClick={() => loadSample(format)}
-            disabled={isLoading}
-          >
-            <DocumentArrowDownIcon className="h-4 w-4" />
-            {format.toUpperCase()}
-          </button>
-        ))}
+      <div className="space-y-1">
         {statusMessage && <p className="text-sm text-brand-700">{statusMessage}</p>}
         {conversionNotice && <p className="text-sm text-amber-600">{conversionNotice}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}

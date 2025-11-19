@@ -21,13 +21,14 @@ _A bilingual UI will be added later._
 
 ## Features
 
-- ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files, converts spreadsheets to CSV for faster parsing, and mirrors the Green Button timezone/multiplier rules with sample data for each format.
+- ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files, converts spreadsheets to CSV for faster parsing, and mirrors the Green Button timezone/multiplier rules.
 - 🧵 XLSX parsing happens inside a dedicated Web Worker (`src/workers/excelParser.ts`) so large spreadsheets do not freeze the UI; the worker shares the `src/lib/parse.ts` helpers and times out after 20 seconds if the browser never responds.
 - ✅ Column mapper that validates cadence (15/30/60-minute), enforces a one-year window, and normalizes kWh/kW/Amps to amps using a 240 V
   recommended default.
-- 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable images.
+- 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable PNG images that mirror the on-screen view.
 - 🧮 Plain-language panel calculator that anchors to the absolute one-year max (×1.25), differentiates continuous vs. non-continuous loads, and lets you stack what-if scenarios.
-- 📄 Download-ready summary that now lists the proposed what-if loads plus an installable offline PWA shell.
+- 🧾 Manual entry path that converts a user-supplied peak kWh reading into amps so crews can run the calculator even when no file is available; the UI clearly flags these runs as unverified and disables the graph.
+- 📄 Download-ready PDF summary that embeds the demand profile chart (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout.
 - 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
 
 ## Uploading interval data
@@ -93,8 +94,8 @@ order; check off each step before moving on.
 10. **Watch the deployment.** Go to the **Actions** tab, open the "Deploy panel-checker to Pages" workflow run, and wait for the
     green check marks. The **deploy** job shows the published URL (usually
     `https://<your-username>.github.io/<repo-name>/`).
-11. **Test the site.** Visit the published URL in a new browser tab. Use the "Try sample data" option if you do not have a CSV
-    handy and confirm that the chart, calculator, and report tabs load.
+11. **Test the site.** Visit the published URL in a new browser tab. Upload a CSV/XML/XLSX interval file or use the manual peak
+    entry path to confirm that the chart (when data exists), calculator, and PDF report all load.
 12. **Repeat after changes.** Every push to `main` reruns the workflow. If you make a major UI or build change, ensure the README
     and this runbook stay accurate (see `AGENTS.md`).
 
