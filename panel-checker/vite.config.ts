@@ -8,14 +8,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'sample-15min.csv'],
+      includeAssets: ['icon.svg', 'spark-logo.svg', 'sample-15min.csv'],
       workbox: {
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024
       },
       manifest: {
-        name: "LEEP's Electrical Panel Screening Tool - Proven Demand Method",
-        short_name: 'LEEP Panel',
-        description: 'LEEP Proven Demand Method screening for electrical panels with utility interval data.',
+        name: 'LEEP SPARK Tool – System for Peak Amperage from Real kWh',
+        short_name: 'LEEP SPARK',
+        description:
+          'LEEP SPARK (System for Peak Amperage from Real kWh) screening for electrical panels with utility interval data.',
         theme_color: '#021b33',
         background_color: '#ffffff',
         display: 'standalone',

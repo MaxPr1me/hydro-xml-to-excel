@@ -1,6 +1,6 @@
 {
-  "name": "LEEP's Electrical Panel Screening Tool - Proven Demand Method",
-  "short_name": "LEEP Panel",
+  "name": "LEEP SPARK Tool – System for Peak Amperage from Real kWh",
+  "short_name": "LEEP SPARK",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -13,6 +13,7 @@ const tabs = [
 export default function App() {
   const [data, setData] = useState<IntervalDatum[]>([]);
   const navigate = useNavigate();
+  const sparkLogoUrl = `${import.meta.env.BASE_URL}spark-logo.svg`;
 
   const handleData = useCallback(
     (records: IntervalDatum[]) => {
@@ -45,7 +46,7 @@ export default function App() {
             </div>
             <div className="flex flex-1 justify-center">
               <img
-                src="/spark-logo.svg"
+                src={sparkLogoUrl}
                 alt="SPARK load profile logo"
                 className="w-full max-w-md"
               />

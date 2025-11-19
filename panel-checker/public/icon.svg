@@ -1,17 +1,33 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LEEP Proven Demand badge">
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LEEP SPARK badge">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1f6bc4" />
-      <stop offset="100%" stop-color="#053058" />
+    <linearGradient id="spark-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#112E4A" />
+      <stop offset="100%" stop-color="#051426" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="64" fill="url(#bg)" />
-  <rect x="64" y="160" width="384" height="36" rx="18" fill="#9cd956" />
-  <text x="256" y="220" font-family="'Inter', 'Segoe UI', sans-serif" font-size="180" font-weight="900" fill="#ffffff" text-anchor="middle">LEEP</text>
-  <text x="256" y="320" font-family="'Inter', 'Segoe UI', sans-serif" font-size="28" font-weight="600" fill="#e6f0fb" text-anchor="middle" letter-spacing="8">
-    LOCAL ENERGY EFFICIENCY PARTNERSHIPS
+  <rect width="512" height="512" rx="72" fill="url(#spark-bg)" />
+  <polyline
+    points="60,330 140,330 180,300 220,360 270,240 330,360 390,280 452,320"
+    fill="none"
+    stroke="#7FD2FF"
+    stroke-width="20"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <polygon
+    points="270,200 280,230 312,230 286,247 296,278 270,260 244,278 254,247 228,230 260,230"
+    fill="#FFC933"
+  />
+  <text x="256" y="180" font-family="'Inter', 'Segoe UI', sans-serif" font-size="44" font-weight="600" fill="#7FD2FF" letter-spacing="0.4em" text-anchor="middle">
+    LEEP
   </text>
-  <text x="256" y="370" font-family="'Inter', 'Segoe UI', sans-serif" font-size="24" font-weight="500" fill="#9cd956" text-anchor="middle">
-    PROVEN DEMAND METHOD
+  <text x="256" y="250" font-family="'Inter', 'Segoe UI', sans-serif" font-size="96" font-weight="800" fill="#FFFFFF" text-anchor="middle">
+    SPARK
+  </text>
+  <text x="256" y="420" font-family="'Inter', 'Segoe UI', sans-serif" font-size="24" font-weight="500" fill="#FFC933" text-anchor="middle" letter-spacing="0.2em">
+    SYSTEM FOR PEAK AMPERAGE
+  </text>
+  <text x="256" y="452" font-family="'Inter', 'Segoe UI', sans-serif" font-size="20" font-weight="500" fill="#8FB9D9" text-anchor="middle" letter-spacing="0.18em">
+    FROM REAL KILOWATT-HOURS
   </text>
 </svg>

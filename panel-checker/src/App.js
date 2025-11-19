@@ -19,9 +19,11 @@ export default function App() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-600">
-              LEEP's Electrical Panel Screening Tool - Proven Demand Method
+              LEEP SPARK Tool – System for Peak Amperage from Real kWh
             </p>
-            <p className="text-sm text-slate-500">CSV → validation → charts → calculator → report.</p>
+            <p className="text-sm text-slate-500">
+              CSV → validation → charts → calculator → report.
+            </p>
           </div>
           <nav className="flex gap-2">
             {tabs.map((tab) => (<button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`rounded-full px-4 py-2 text-sm font-semibold transition ${activeTab === tab.id ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
