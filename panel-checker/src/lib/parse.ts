@@ -91,15 +91,15 @@ export function parseGreenButtonXml(text: string): CsvPreview {
   const doc = parseXml(text);
   const readings = Array.from(doc.getElementsByTagNameNS(ESPI_NS, 'IntervalReading'));
   if (!readings.length) {
-    throw new Error('No interval readings were found in the XML file.');
+    throw new Error('No valid data found in the XML file.');
   }
 
   const tzOffsetSeconds = Number(doc.getElementsByTagNameNS(ESPI_NS, 'tzOffset')[0]?.textContent ?? '0');
   const multiplierValue = Number(doc.getElementsByTagNameNS(ESPI_NS, 'powerOfTenMultiplier')[0]?.textContent ?? '0');
   const scaleFactor = multiplierValue === -6 ? 10 ** multiplierValue : (10 ** multiplierValue) / 1000;
 
-  const unique = new Set<number>();
-  const samples: Array<{ timestampMs: number; kwh: number }> = [];
+  const seenTimestamps = new Set<number>();
+  const samples: Array<{ timestamp: Date; rawValue: number }> = [];
 
   readings.forEach((node) => {
     const startSeconds = Number(node.getElementsByTagNameNS(ESPI_NS, 'start')[0]?.textContent ?? '');
@@ -109,47 +109,49 @@ export function parseGreenButtonXml(text: string): CsvPreview {
     }
     const localizedSeconds = startSeconds + tzOffsetSeconds;
     const timestampMs = localizedSeconds * 1000;
-    if (unique.has(timestampMs)) {
+    if (seenTimestamps.has(timestampMs)) {
       return;
     }
-    unique.add(timestampMs);
-    samples.push({ timestampMs, kwh: rawValue * scaleFactor });
+    seenTimestamps.add(timestampMs);
+    samples.push({ timestamp: new Date(timestampMs), rawValue });
   });
 
-  if (samples.length < 2) {
-    throw new Error('XML file did not include enough interval readings to analyze.');
+  if (!samples.length) {
+    throw new Error('No valid data found in the XML file.');
   }
 
-  samples.sort((a, b) => a.timestampMs - b.timestampMs);
+  samples.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-  const deltas: number[] = [];
-  for (let i = 1; i < samples.length; i += 1) {
-    const deltaSeconds = (samples[i].timestampMs - samples[i - 1].timestampMs) / 1000;
-    if (deltaSeconds > 0) {
-      deltas.push(deltaSeconds);
-    }
+  const coverageDays =
+    (samples[samples.length - 1].timestamp.getTime() - samples[0].timestamp.getTime()) / (1000 * 60 * 60 * 24);
+  if (coverageDays < 365) {
+    throw new Error('Not enough data for analysis. At least one year of data is required.');
   }
 
-  if (!deltas.length) {
-    throw new Error('Unable to determine the timestep of the XML data.');
+  const deltaSeconds =
+    samples.length > 1
+      ? (samples[1].timestamp.getTime() - samples[0].timestamp.getTime()) / 1000
+      : 60 * 60;
+  if (deltaSeconds > 60 * 60) {
+    throw new Error(`Data timestep is larger than 1 hour: ${Math.round(deltaSeconds / 60)} minutes.`);
   }
 
-  const averageDeltaSeconds = Math.round(deltas.reduce((sum, value) => sum + value, 0) / deltas.length);
-  if (averageDeltaSeconds > 60 * 60) {
-    throw new Error(`Data timestep is larger than one hour (${Math.round(averageDeltaSeconds / 60)} minutes).`);
-  }
+  const filteredSamples =
+    deltaSeconds === 60 * 60
+      ? samples.filter((sample) => sample.timestamp.getUTCMinutes() === 0 && sample.timestamp.getUTCSeconds() === 0)
+      : samples;
 
-  const coverageMs = samples[samples.length - 1].timestampMs - samples[0].timestampMs;
-  if (coverageMs < MS_PER_YEAR) {
-    throw new Error('Upload at least one continuous year of interval data.');
-  }
+  const rows = filteredSamples.map((entry) => {
+    const kwh = entry.rawValue * scaleFactor;
+    const amps = (kwh / (deltaSeconds / 3600) * 1000) / 240;
+    return {
+      timestamp: entry.timestamp.toISOString(),
+      energy_kwh: kwh.toFixed(4),
+      amps: amps.toFixed(2)
+    };
+  });
 
-  const rows = samples.map((entry) => ({
-    timestamp: new Date(entry.timestampMs).toISOString(),
-    energy_kwh: entry.kwh.toFixed(4)
-  }));
-
-  return { columns: ['timestamp', 'energy_kwh'], rows };
+  return { columns: ['timestamp', 'energy_kwh', 'amps'], rows };
 }
 
 export interface MappingResult {
