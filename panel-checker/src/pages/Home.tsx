@@ -17,6 +17,7 @@ export default function Home({ onAnalysisReady }: Props) {
   const [manualCadence, setManualCadence] = useState(15);
   const [manualVoltage, setManualVoltage] = useState<120 | 208 | 240>(240);
   const [manualError, setManualError] = useState<string | null>(null);
+  const [showManualEntry, setShowManualEntry] = useState(false);
 
   const handlePreview = (parsed: CsvPreview) => {
     setPreview(parsed);
@@ -69,6 +70,17 @@ export default function Home({ onAnalysisReady }: Props) {
 
       <Uploader onPreview={handlePreview} />
 
+      {preview && <Mapper preview={preview} onComplete={handleMapping} />}
+
+      {result && (
+        <div className="rounded-2xl bg-[#FFC933]/20 p-4 text-sm text-[#0F2941]">
+          {textEn.home.summaryPrefix} {result.data.length.toLocaleString()} {textEn.home.summaryCoverageIntro}
+          {' '}
+          {result.coverageStart.toLocaleDateString()} — {result.coverageEnd.toLocaleDateString()}.{' '}
+          {textEn.home.summaryPeakIntro} {result.maxAmps.toFixed(1)} {textEn.home.summaryPeakUnits}
+        </div>
+      )}
+
       <section className="rounded-3xl border border-dashed border-slate-300 bg-white/70 p-6 text-sm text-slate-700">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-700">No file handy?</p>
@@ -79,72 +91,82 @@ export default function Home({ onAnalysisReady }: Props) {
             flagged as unverified user input.
           </p>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-4">
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Peak interval energy (kWh)
+        <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-inner">
+          <label className="flex cursor-pointer items-start gap-3">
             <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={manualPeakKwh}
-              onChange={(event) => setManualPeakKwh(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-              placeholder="e.g. 3.25"
+              type="checkbox"
+              className="mt-0.5 h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-600"
+              checked={showManualEntry}
+              onChange={(event) => setShowManualEntry(event.target.checked)}
             />
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-900">Use a manual peak instead</p>
+              <p className="text-xs text-slate-600">
+                Check to reveal the fields for a customer-provided peak reading when no interval file is available.
+              </p>
+            </div>
           </label>
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Interval cadence
-            <select
-              value={manualCadence}
-              onChange={(event) => setManualCadence(Number(event.target.value))}
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            >
-              {[15, 30, 60].map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {minutes}-minute data
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Service voltage
-            <select
-              value={manualVoltage}
-              onChange={(event) => setManualVoltage(Number(event.target.value) as 120 | 208 | 240)}
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            >
-              {[120, 208, 240].map((voltage) => (
-                <option key={voltage} value={voltage}>
-                  {voltage} V
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-end">
-            <button
-              type="button"
-              className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow"
-              onClick={handleManualSubmit}
-            >
-              Use manual peak
-            </button>
-          </div>
+
+          {showManualEntry && (
+            <div className="grid gap-4 md:grid-cols-4">
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Peak interval energy (kWh)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={manualPeakKwh}
+                  onChange={(event) => setManualPeakKwh(event.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                  placeholder="e.g. 3.25"
+                />
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Interval cadence
+                <select
+                  value={manualCadence}
+                  onChange={(event) => setManualCadence(Number(event.target.value))}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                >
+                  {[15, 30, 60].map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      {minutes}-minute data
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Service voltage
+                <select
+                  value={manualVoltage}
+                  onChange={(event) => setManualVoltage(Number(event.target.value) as 120 | 208 | 240)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                >
+                  {[120, 208, 240].map((voltage) => (
+                    <option key={voltage} value={voltage}>
+                      {voltage} V
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow"
+                  onClick={handleManualSubmit}
+                >
+                  Use manual peak
+                </button>
+              </div>
+            </div>
+          )}
+          {showManualEntry && manualError && <p className="text-sm text-rose-600">{manualError}</p>}
+          <p className="text-xs text-slate-500">
+            Disclaimer: This path never generates a graph. The calculator will mark the run as user-supplied data only, so
+            include proof of the interval reading when submitting to a utility or AHJ.
+          </p>
         </div>
-        {manualError && <p className="mt-3 text-sm text-rose-600">{manualError}</p>}
-        <p className="mt-4 text-xs text-slate-500">
-          Disclaimer: This path never generates a graph. The calculator will mark the run as user-supplied data only, so include
-          proof of the interval reading when submitting to a utility or AHJ.
-        </p>
       </section>
-      {preview && <Mapper preview={preview} onComplete={handleMapping} />}
-      {result && (
-        <div className="rounded-2xl bg-[#FFC933]/20 p-4 text-sm text-[#0F2941]">
-          {textEn.home.summaryPrefix} {result.data.length.toLocaleString()} {textEn.home.summaryCoverageIntro}
-          {' '}
-          {result.coverageStart.toLocaleDateString()} — {result.coverageEnd.toLocaleDateString()}.{' '}
-          {textEn.home.summaryPeakIntro} {result.maxAmps.toFixed(1)} {textEn.home.summaryPeakUnits}
-        </div>
-      )}
     </main>
   );
 }
