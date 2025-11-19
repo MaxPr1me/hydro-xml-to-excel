@@ -6,7 +6,7 @@ export default function ReportCard({ data, verdict }) {
         if (!stats)
             return;
         const lines = [
-            "LEEP's Electrical Panel Screening Tool - Proven Demand Method",
+            'LEEP SPARK Tool – System for Peak Amperage from Real kWh',
             `Coverage: ${stats.start.toISOString()} — ${stats.end.toISOString()}`,
             `Cadence: ${stats.cadenceMinutes} minutes`,
             `Peak amps: ${stats.maxAmps.toFixed(1)}`,
@@ -16,7 +16,7 @@ export default function ReportCard({ data, verdict }) {
             '',
             'This is a screening tool only. Confirm with a licensed electrician.'
         ];
-        downloadTextFile('panel-checker-report.txt', lines.join('\n'));
+        downloadTextFile('leep-spark-panel-report.txt', lines.join('\n'));
     };
     return (<section className="space-y-3 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
       <div className="flex items-center justify-between">
