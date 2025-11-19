@@ -1,10 +1,23 @@
-# LEEP's Electrical Panel Screening Tool - Proven Demand Method
+# LEEP’s SPARK Tool – System for Peak Amperage from Real kWh
 
-LEEP's Electrical Panel Screening Tool - Proven Demand Method helps electricians, energy advisors, and DER installers decide if an
-electrical panel has enough headroom for an added load. Upload CSV, XLSX, or Green Button XML interval data, map its columns,
-visualize the demand profile, and read a plain-language verdict that summarizes continuous vs. non-continuous loads. This React +
-Vite experience replaces the original "Hydro XML to Excel" Gradio demo while keeping the same goal: turn raw utility interval
-data into a confident go/no-go answer that matches the LEEP Proven Demand Method.
+```
+                 /\
+                /  \        _
+               /    \      / \ 
+----\/\-------/------\----/---\---------
+         \    /        \/     \ 
+          \  /                 *
+           \/
+        SPARK
+ SYSTEM FOR PEAK AMPERAGE
+      FROM REAL kWh
+```
+
+SPARK is a data-driven analysis tool developed by CanmetENERGY-Ottawa to support electrification retrofits in Canadian homes. Using historical interval meter data, SPARK calculates peak amperage and demonstrated demand so contractors can determine whether a main electrical panel actually requires an upgrade. By relying on real kWh consumption data rather than conservative assumptions, SPARK helps homeowners, utilities, and programs avoid unnecessary panel upgrades.
+
+SPARK keeps the same mission as the original Hydro XML to Excel utility viewer: upload CSV, XLSX, or Green Button XML interval data, map its columns, visualize the demand profile, and review a plain-language verdict that summarizes continuous vs. non-continuous loads. The React + Vite experience now reflects the updated branding while preserving every parser, mapper, and chart workflow that teams rely on.
+
+_A bilingual UI will be added later._
 
 ## Features
 
