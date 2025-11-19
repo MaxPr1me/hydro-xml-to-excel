@@ -9,7 +9,7 @@
     "type": "git",
     "url": "https://github.com/MaxPr1me/hydro-xml-to-excel.git"
   },
-  "homepage": "https://maxpr1me.github.io/hydro-xml-to-excel/",
+  "homepage": "./",
   "type": "module",
   "scripts": {
     "dev": "vite",
