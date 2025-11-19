@@ -1,7 +1,15 @@
 {
-  "name": "panel-checker",
+  "name": "leep-spark-tool",
   "version": "0.1.0",
   "private": true,
+  "description": "LEEP's SPARK Tool (System for Peak Amperage from Real kWh) web application.",
+  "author": "Natural Resources Canada (NRCan)",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MaxPr1me/hydro-xml-to-excel.git"
+  },
+  "homepage": "https://maxpr1me.github.io/hydro-xml-to-excel/",
   "type": "module",
   "scripts": {
     "dev": "vite",

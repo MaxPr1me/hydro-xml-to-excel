@@ -83,6 +83,14 @@ export default function App() {
           <p>{textEn.footer.pwa}</p>
           <p>{textEn.footer.bilingual}</p>
           <p>
+            <a
+              href="https://github.com/MaxPr1me/hydro-xml-to-excel/blob/main/LICENSE"
+              className="font-semibold underline"
+            >
+              {textEn.footer.license}
+            </a>
+          </p>
+          <p>
             Contact us:{' '}
             <a href="mailto:leep@nrcan-rncan.gc.ca" className="font-semibold underline">
               leep@nrcan-rncan.gc.ca

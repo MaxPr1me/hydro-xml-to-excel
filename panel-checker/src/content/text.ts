@@ -27,6 +27,8 @@ export const textEn = {
   },
   footer: {
     pwa: 'Installable PWA · Works offline after first load.',
-    bilingual: 'Bilingual UI coming soon.'
+    bilingual: 'Bilingual UI coming soon.',
+    license:
+      "License: NRCan End-User License Agreement for LEEP's SPARK Tool (System for Peak Amperage from Real kWh)."
   }
 } as const;
