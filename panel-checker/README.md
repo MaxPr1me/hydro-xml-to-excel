@@ -127,3 +127,7 @@ panel-checker/          # React + Vite app and build scripts
 
 The legacy Python app (`app.py` + `requirements.txt`) has been removed from this branch so that the focus stays on the static web
 app that runs on GitHub Pages.
+
+## License
+
+LEEP’s SPARK Tool is distributed under NRCan’s LEEP SPARK Tool End-User Licence Agreement. See the `LICENSE` file in this repository or review the official agreement at https://hvac-tool-outil-cvca.nrcan-rncan.gc.ca/license for the full terms.

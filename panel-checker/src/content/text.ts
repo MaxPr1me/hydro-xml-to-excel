@@ -27,6 +27,12 @@ export const textEn = {
   },
   footer: {
     pwa: 'Installable PWA · Works offline after first load.',
-    bilingual: 'Bilingual UI coming soon.'
+    bilingual: 'Bilingual UI coming soon.',
+    license: {
+      prefix:
+        'Licensed under NRCan’s LEEP SPARK Tool End-User Licence Agreement.',
+      linkLabel: 'Review the full agreement.',
+      url: 'https://hvac-tool-outil-cvca.nrcan-rncan.gc.ca/license'
+    }
   }
 } as const;

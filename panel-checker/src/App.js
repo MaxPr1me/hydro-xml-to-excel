@@ -39,6 +39,17 @@ export default function App() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-xs text-slate-500">
           <p>Installable PWA · Works offline after first load.</p>
           <p>English / Français copy ready.</p>
+          <p className="flex flex-wrap gap-1">
+            <span>Licensed under NRCan’s LEEP SPARK Tool End-User Licence Agreement.</span>
+            <a
+              href="https://hvac-tool-outil-cvca.nrcan-rncan.gc.ca/license"
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+            >
+              Review the full agreement.
+            </a>
+          </p>
         </div>
       </footer>
     </div>);

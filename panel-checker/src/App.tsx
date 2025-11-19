@@ -82,6 +82,17 @@ export default function App() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-xs">
           <p>{textEn.footer.pwa}</p>
           <p>{textEn.footer.bilingual}</p>
+          <p className="flex flex-wrap gap-1">
+            <span>{textEn.footer.license.prefix}</span>
+            <a
+              href={textEn.footer.license.url}
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-white/60 underline-offset-2 hover:decoration-white"
+            >
+              {textEn.footer.license.linkLabel}
+            </a>
+          </p>
         </div>
       </footer>
     </div>

@@ -1,7 +1,19 @@
 {
-  "name": "panel-checker",
+  "name": "spark-panel-checker",
   "version": "0.1.0",
   "private": true,
+  "description": "LEEP’s SPARK Tool for validating interval data and sizing main electrical panels.",
+  "author": "CanmetENERGY-Ottawa, Natural Resources Canada (NRCan)",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "homepage": "https://maxpr1me.github.io/hydro-xml-to-excel/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MaxPr1me/hydro-xml-to-excel.git",
+    "directory": "panel-checker"
+  },
+  "bugs": {
+    "url": "https://github.com/MaxPr1me/hydro-xml-to-excel/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
