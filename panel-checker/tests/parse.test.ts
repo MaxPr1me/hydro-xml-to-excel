@@ -91,6 +91,22 @@ describe('NS Power SMOC parser', () => {
     assert.equal(result.unit, 'Amps');
   });
 
+  it('tolerates occasional missing intervals that line up with the detected cadence', () => {
+    const preview = buildSmocPreview(
+      ['Interval Period End Timestamp Local', 'Max A(a)', 'Max A(c)'],
+      15,
+      370,
+      10,
+      12
+    );
+
+    const trimmedRows = preview.rows.filter((_, index) => (index + 1) % 50 !== 0);
+    const result = parseNsPowerSmocRows(preview.columns, trimmedRows);
+
+    assert.equal(result.cadenceMinutes, 15);
+    assert.ok(result.data.length < preview.rows.length);
+  });
+
   it('throws on malformed timestamps', () => {
     const preview: CsvPreview = {
       columns: ['Interval Period End Timestamp Local', 'Max A(a)', 'Max A(c)'],
