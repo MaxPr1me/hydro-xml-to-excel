@@ -101,7 +101,7 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
     throw new Error('At least one section is required to build the PDF.');
   }
 
-  const offsets: number[] = [];
+  const offsetsById: number[] = [];
   const bodyParts: Uint8Array[] = [];
   const header = encode('%PDF-1.4\n%âãÏÓ\n');
   bodyParts.push(header);
@@ -124,20 +124,21 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
   );
   const font = encode(`${fontId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`);
 
-  const addObject = (bytes: Uint8Array) => {
-    offsets.push(position);
+  const addObject = (id: number, bytes: Uint8Array) => {
+    offsetsById[id] = position;
     bodyParts.push(bytes);
     position += bytes.length;
   };
 
-  addObject(catalog);
-  addObject(pages);
-  addObject(font);
+  addObject(catalogId, catalog);
+  addObject(pagesId, pages);
+  addObject(fontId, font);
 
   options.sections.forEach((section, index) => {
     const imageId = imageIds[index];
     if (section.image && imageId) {
       addObject(
+        imageId,
         concatBytes(
           encode(
             `${imageId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${section.image.width} /Height ${section.image.height}` +
@@ -163,7 +164,7 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
       encode('\nendstream\nendobj\n')
     );
 
-    addObject(content);
+    addObject(contentIds[index], content);
 
     const resourceParts = [`/Font << /F1 ${fontId} 0 R >>`];
     if (imageId && imageName) {
@@ -172,6 +173,7 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
 
     const resources = resourceParts.join(' ');
     addObject(
+      pageIds[index],
       encode(
         `${pageIds[index]} 0 obj\n<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << ${resources} >> /Contents ${contentIds[index]} 0 R >>\nendobj\n`
       )
@@ -179,11 +181,15 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
   });
 
   const xrefStart = position;
-  const totalObjects = offsets.length;
+  const totalObjects = nextId - 1;
   let xref = `xref\n0 ${totalObjects + 1}\n0000000000 65535 f \n`;
-  offsets.forEach((offset) => {
+  for (let id = 1; id <= totalObjects; id += 1) {
+    const offset = offsetsById[id];
+    if (offset === undefined) {
+      throw new Error(`Missing PDF offset for object ${id}.`);
+    }
     xref += `${offset.toString().padStart(10, '0')} 00000 n \n`;
-  });
+  }
   xref += `trailer\n<< /Size ${totalObjects + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
   bodyParts.push(encode(xref));
 
