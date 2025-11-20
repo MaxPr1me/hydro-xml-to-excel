@@ -9,11 +9,12 @@ import { renderDemandProfileSnapshot } from '../lib/snapshots';
 interface Props {
   data: IntervalDatum[];
   chartRef?: MutableRefObject<HTMLDivElement | null>;
+  sectionRef?: MutableRefObject<HTMLElement | null>;
 }
 
 type Metric = 'amps' | 'kwh';
 
-export default function DemandChart({ data, chartRef }: Props) {
+export default function DemandChart({ data, chartRef, sectionRef }: Props) {
   const fallbackRef = useRef<HTMLDivElement | null>(null);
   const ref = chartRef ?? fallbackRef;
   const [metric, setMetric] = useState<Metric>('amps');
@@ -134,7 +135,7 @@ export default function DemandChart({ data, chartRef }: Props) {
   };
 
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm">
+    <section ref={sectionRef} className="space-y-3 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Demand profile</h2>

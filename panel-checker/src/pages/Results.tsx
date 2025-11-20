@@ -11,6 +11,8 @@ interface Props {
 export default function Results({ analysis }: Props) {
   const [verdict, setVerdict] = useState<PanelVerdict | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
+  const demandSectionRef = useRef<HTMLElement | null>(null);
+  const reportSectionRef = useRef<HTMLElement | null>(null);
 
   const hasIntervalData = analysis.source === 'file' && analysis.data.length > 0;
   const manualMode = analysis.source === 'manual' && !!analysis.manualPeak;
@@ -29,9 +31,12 @@ export default function Results({ analysis }: Props) {
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
       {hasIntervalData ? (
-        <DemandChart data={analysis.data} chartRef={chartRef} />
+        <DemandChart data={analysis.data} chartRef={chartRef} sectionRef={demandSectionRef} />
       ) : (
-        <section className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 p-6 text-center text-slate-600">
+        <section
+          ref={demandSectionRef}
+          className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 p-6 text-center text-slate-600"
+        >
           <p className="text-lg font-semibold text-slate-800">No interval data provided – graph not available.</p>
           <p className="mt-2 text-sm">
             The customer-supplied peak value lets you use the calculator, but no demand profile image will be generated.
@@ -53,7 +58,15 @@ export default function Results({ analysis }: Props) {
           reading.
         </div>
       )}
-      {verdict && <ReportCard analysis={analysis} verdict={verdict} chartRef={chartRef} />}
+      {verdict && (
+        <ReportCard
+          analysis={analysis}
+          verdict={verdict}
+          chartRef={chartRef}
+          demandSectionRef={demandSectionRef}
+          reportSectionRef={reportSectionRef}
+        />
+      )}
     </main>
   );
 }
