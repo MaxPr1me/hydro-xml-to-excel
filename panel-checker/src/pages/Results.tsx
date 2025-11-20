@@ -14,6 +14,7 @@ export default function Results({ analysis }: Props) {
 
   const hasIntervalData = analysis.source === 'file' && analysis.data.length > 0;
   const manualMode = analysis.source === 'manual' && !!analysis.manualPeak;
+  const smocMode = analysis.mode === 'ns-power-smoc';
 
   if (!hasIntervalData && !manualMode) {
     return (
@@ -36,6 +37,13 @@ export default function Results({ analysis }: Props) {
             The customer-supplied peak value lets you use the calculator, but no demand profile image will be generated.
           </p>
         </section>
+      )}
+      {smocMode && hasIntervalData && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          NS Power SMOC mode: intervals come from the "Interval Period End Timestamp Local" column, and amperage uses the
+          maximum of Max A(a) and Max A(c) per row. Files with missing Max A columns or malformed timestamps will stop with a
+          clear error.
+        </div>
       )}
       <PanelCalculator analysis={analysis} onVerdictChange={setVerdict} />
       {manualMode && (

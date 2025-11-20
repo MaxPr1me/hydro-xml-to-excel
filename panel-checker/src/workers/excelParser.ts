@@ -1,12 +1,10 @@
 /// <reference lib="webworker" />
-import { excelBufferToCsv } from '../lib/convert';
-import { parseCsv, parseExcel, type ExcelParseResult } from '../lib/parse';
+import { parseExcel, type ExcelParseResult } from '../lib/parse';
 import type { CsvPreview } from '../types';
 
 export interface ExcelWorkerRequest {
   jobId: number;
   buffer: ArrayBuffer;
-  allowConversion: boolean;
 }
 
 export type ExcelWorkerSuccess = {
@@ -14,7 +12,6 @@ export type ExcelWorkerSuccess = {
   type: 'success';
   preview: CsvPreview;
   warning?: string;
-  usedConversion: boolean;
 };
 
 export type ExcelWorkerError = {
@@ -28,36 +25,12 @@ export type ExcelWorkerResponse = ExcelWorkerSuccess | ExcelWorkerError;
 const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
 
 ctx.onmessage = async (event: MessageEvent<ExcelWorkerRequest>) => {
-  const { jobId, buffer, allowConversion } = event.data;
+  const { jobId, buffer } = event.data;
   try {
     const { preview, warning }: ExcelParseResult = await parseExcel(buffer);
-    const payload: ExcelWorkerSuccess = { jobId, type: 'success', preview, warning, usedConversion: false };
+    const payload: ExcelWorkerSuccess = { jobId, type: 'success', preview, warning };
     ctx.postMessage(payload);
   } catch (error) {
-    if (allowConversion) {
-      try {
-        const csvText = await excelBufferToCsv(buffer);
-        const preview = parseCsv(csvText);
-        const payload: ExcelWorkerSuccess = {
-          jobId,
-          type: 'success',
-          preview,
-          warning: undefined,
-          usedConversion: true
-        };
-        ctx.postMessage(payload);
-        return;
-      } catch (conversionError) {
-        const payload: ExcelWorkerError = {
-          jobId,
-          type: 'error',
-          message:
-            (conversionError as Error)?.message ?? 'Excel conversion fallback could not parse the file.'
-        };
-        ctx.postMessage(payload);
-        return;
-      }
-    }
     const payload: ExcelWorkerError = {
       jobId,
       type: 'error',

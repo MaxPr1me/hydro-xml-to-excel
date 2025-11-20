@@ -15,7 +15,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "npm run build-tests && node --test .tmp-tests/tests/**/*.js",
+    "build-tests": "tsc -p tsconfig.test.json && node scripts/write-test-package.js"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",

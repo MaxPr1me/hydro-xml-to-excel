@@ -25,3 +25,10 @@ changed and why. This keeps future agents oriented.
 - 2025-11-20 – Vite base switched to `./`, BrowserRouter basename now resolves at runtime, and docs updated so forks deploy to GitHub Pages without manual path edits.
 - 2025-11-21 – GitHub Pages workflow now targets the repo's default branch and app metadata uses relative URLs for forks.
 - 2025-11-22 – Added fork-friendly coding policy to keep branches, URLs, and org names dynamic.
+
+## Tasks
+
+- 2025-11-23 – Harden interval parsing: decouple timestamp detection from column position, infer cadence from larger samples, and surface clear errors when cadence exceeds 60 minutes or rows are irregular.
+- 2025-11-23 – Remove Excel auto-conversion fallback from the UI, worker, and helpers so only the primary CSV/XLSX/XML parsers run.
+- 2025-11-23 – Add upload mode toggle for flexible data vs. NS Power SMOC files, implement a dedicated SMOC parser that derives amperage across phases, and route the chosen mode through the analyzer.
+- 2025-11-23 – Update copy, documentation, and tests to cover the new modes, NS Power assumptions, and the refreshed parsing rules.

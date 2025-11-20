@@ -30,23 +30,18 @@ _A bilingual UI will be added later._
 - 🧾 Manual entry path that converts a user-supplied peak kWh reading into amps so crews can run the calculator even when no file is available; the UI clearly flags these runs as unverified and disables the graph.
 - 📄 Download-ready PDF summary that embeds the demand profile chart (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout.
 - 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
+- 🔀 Mode toggle for generic Flexible interval data vs. NS Power SMOC XLSX exports; the SMOC path reads "Interval Period End Timestamp Local" and uses the higher of Max A(a)/Max A(c) per interval.
 
 ## Uploading interval data
 
 - **CSV uploads must stay plain text.** The uploader expects standard comma-separated text (UTF-8 or ASCII). Zipped CSVs, binary Excel exports, or files that were renamed from `.xlsx` to `.csv` will fail because the parser streams the file line-by-line.
-- **XLSX files are parsed in a worker with SheetJS.** Dragging an Excel workbook keeps you offline while the worker reads the first worksheet with a header row and a timestamp/date in the first column. For GitHub Pages responsiveness, only the first ~100,000 data rows are processed and the uploader surfaces a truncation warning when that limit is reached. Renaming a CSV to `.xlsx` does not gain any formatting support.
+- **XLSX files are parsed in a worker with SheetJS.** Dragging an Excel workbook keeps you offline while the worker reads the first worksheet with a clear header row. The parser scans for timestamp headers (it no longer assumes the first column holds dates) and keeps extra columns intact. For GitHub Pages responsiveness, only the first ~100,000 data rows are processed and the uploader surfaces a truncation warning when that limit is reached. Renaming a CSV to `.xlsx` does not gain any formatting support.
 - **Green Button XML follows the official spec.** The parser keeps the timezone offset, multiplier, and quality flags intact so the mapper receives the raw values your utility provided.
 
-## Troubleshooting Excel uploads
+### Choosing a mode
 
-- The uploader streams XLSX bytes through the SheetJS-powered helper in `src/lib/parse.ts` and keeps the parsing inside the browser. The first worksheet is read client-side, and datasets beyond ~100,000 rows are truncated with an amber warning to avoid freezing GitHub Pages.
-- Some browsers occasionally block third-party scripts or strip workbook metadata. When that happens you can enable the
-  **Auto-convert Excel if parsing fails** toggle underneath the uploader. After the first error the worker lazily converts the
-  first worksheet to CSV text via SheetJS and retries with the CSV parser.
-- Conversion flattens formulas, formats, and dates, so the UI surfaces an amber warning whenever the fallback is used. Only the
-  first worksheet is converted, formula cells are evaluated once (no relative references), and Excel number formats may round the
-  exported text. Check your timestamps/values after the retry and, if possible, upload a clean CSV export from the original tool
-  once the issue is resolved.
+- **Flexible interval data** accepts CSV, XLSX, and Green Button XML. Timestamp headers are detected by name, and cadence is inferred from the first several dozen valid rows.
+- **NS Power SMOC data** expects the Interval Period End Timestamp Local column and Max A(a)/Max A(c) fields on the first worksheet of an XLSX export. Amperage is derived from the highest phase per interval; malformed timestamps or missing Max A columns raise immediate errors.
 
 ## Tech stack
 

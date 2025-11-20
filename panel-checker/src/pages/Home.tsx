@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Uploader from '../components/Uploader';
 import Mapper from '../components/Mapper';
-import { AnalysisState, CsvPreview, IntervalDatum } from '../types';
+import { AnalysisState, CsvPreview, IntervalDatum, UploadMode } from '../types';
 import type { MappingResult } from '../lib/parse';
 import { textEn } from '../content/text';
 import { convertToAmps } from '../lib/units';
@@ -18,6 +18,7 @@ export default function Home({ onAnalysisReady }: Props) {
   const [manualVoltage, setManualVoltage] = useState<120 | 208 | 240>(240);
   const [manualError, setManualError] = useState<string | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [uploadMode, setUploadMode] = useState<UploadMode>('flexible');
 
   const handlePreview = (parsed: CsvPreview) => {
     setPreview(parsed);
@@ -26,7 +27,13 @@ export default function Home({ onAnalysisReady }: Props) {
 
   const handleMapping = (mappingResult: MappingResult) => {
     setResult(mappingResult);
-    onAnalysisReady({ source: 'file', data: mappingResult.data });
+    onAnalysisReady({ source: 'file', data: mappingResult.data, mode: uploadMode });
+  };
+
+  const handleParsedData = (mappingResult: MappingResult) => {
+    setPreview(null);
+    setResult(mappingResult);
+    onAnalysisReady({ source: 'file', data: mappingResult.data, mode: uploadMode });
   };
 
   const handleManualSubmit = () => {
@@ -42,6 +49,7 @@ export default function Home({ onAnalysisReady }: Props) {
     onAnalysisReady({
       source: 'manual',
       data: [],
+      mode: uploadMode,
       manualPeak: {
         kwh: parsed,
         intervalMinutes: manualCadence,
@@ -68,9 +76,18 @@ export default function Home({ onAnalysisReady }: Props) {
         </div>
       </section>
 
-      <Uploader onPreview={handlePreview} />
+      <Uploader
+        mode={uploadMode}
+        onModeChange={(mode) => {
+          setUploadMode(mode);
+          setPreview(null);
+          setResult(null);
+        }}
+        onPreview={handlePreview}
+        onParsedData={handleParsedData}
+      />
 
-      {preview && <Mapper preview={preview} onComplete={handleMapping} />}
+      {uploadMode === 'flexible' && preview && <Mapper preview={preview} onComplete={handleMapping} />}
 
       {result && (
         <div className="rounded-2xl bg-[#FFC933]/20 p-4 text-sm text-[#0F2941]">

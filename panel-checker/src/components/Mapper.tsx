@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ColumnMapping, CsvPreview, IntervalUnit } from '../types';
-import { mapRecords, type MappingResult } from '../lib/parse';
+import { guessTimestampColumn, guessValueColumn, mapRecords, type MappingResult } from '../lib/parse';
 
 interface Props {
   preview: CsvPreview;
@@ -11,13 +11,23 @@ const units: IntervalUnit[] = ['kWh', 'kW', 'Amps'];
 const voltages: Array<120 | 208 | 240> = [120, 208, 240];
 
 export default function Mapper({ preview, onComplete }: Props) {
+  const detectedTimeColumn = useMemo(() => guessTimestampColumn(preview) ?? preview.columns[0] ?? '', [preview]);
+  const detectedValueColumn = useMemo(
+    () => guessValueColumn(preview, detectedTimeColumn) ?? preview.columns.find((column) => column !== detectedTimeColumn) ?? '',
+    [detectedTimeColumn, preview]
+  );
+
   const [mapping, setMapping] = useState<ColumnMapping>({
-    timeColumn: preview.columns[0] ?? '',
-    valueColumn: preview.columns[1] ?? '',
+    timeColumn: detectedTimeColumn,
+    valueColumn: detectedValueColumn,
     unit: 'kWh',
     voltage: 240
   });
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMapping((prev) => ({ ...prev, timeColumn: detectedTimeColumn, valueColumn: detectedValueColumn }));
+  }, [detectedTimeColumn, detectedValueColumn]);
 
   const ready = useMemo(
     () => Boolean(mapping.timeColumn && mapping.valueColumn && mapping.unit && mapping.voltage),
