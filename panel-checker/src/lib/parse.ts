@@ -639,7 +639,9 @@ function assertCadenceContinuity(series: Array<{ timestamp: Date }>, cadenceMinu
   const tolerance = Math.max(CADENCE_TOLERANCE_MINUTES, 1);
   for (let i = 1; i < series.length; i += 1) {
     const deltaMinutes = (series[i].timestamp.getTime() - series[i - 1].timestamp.getTime()) / MS_PER_MINUTE;
-    if (deltaMinutes - cadenceMinutes > tolerance) {
+    const multiples = Math.max(1, Math.round(deltaMinutes / cadenceMinutes));
+    const nearestExpected = multiples * cadenceMinutes;
+    if (Math.abs(deltaMinutes - nearestExpected) > tolerance) {
       throw new Error(
         'Detected gaps larger than the expected cadence in the NS Power SMOC data. Fill or explain missing intervals before retrying.'
       );
@@ -676,7 +678,12 @@ export function inferCadenceMinutes(dates: Date[]): number {
     throw new Error(`Data timestep is larger than 60 minutes: ${cadence} minutes.`);
   }
 
-  const inconsistent = deltas.some((delta) => Math.abs(delta - cadence) > CADENCE_TOLERANCE_MINUTES);
+  const inconsistent = deltas.some((delta) => {
+    const rounded = Math.round(delta);
+    const multiples = Math.max(1, Math.round(rounded / cadence));
+    const nearestExpected = multiples * cadence;
+    return Math.abs(rounded - nearestExpected) > CADENCE_TOLERANCE_MINUTES;
+  });
   if (inconsistent) {
     throw new Error('Intervals appear irregular within the first few dozen rows. Check for missing readings or gaps.');
   }
