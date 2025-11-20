@@ -560,13 +560,29 @@ function mapNsPowerRows(
   }
 
   series.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  const mergedSeries = mergeDuplicateTimestamps(series);
 
-  const cadenceMinutes = inferCadenceMinutes(series.map((entry) => entry.timestamp));
-  assertCadenceContinuity(series, cadenceMinutes);
+  const cadenceMinutes = inferCadenceMinutes(mergedSeries.map((entry) => entry.timestamp));
+  assertCadenceContinuity(mergedSeries, cadenceMinutes);
 
-  const records = series.map((entry) => toIntervalDatum(entry.timestamp, entry.amps, 'Amps', 240, cadenceMinutes));
+  const records = mergedSeries.map((entry) =>
+    toIntervalDatum(entry.timestamp, entry.amps, 'Amps', 240, cadenceMinutes)
+  );
 
   return { records, cadenceMinutes };
+}
+
+function mergeDuplicateTimestamps(series: Array<{ timestamp: Date; amps: number }>): Array<{ timestamp: Date; amps: number }> {
+  const merged: Array<{ timestamp: Date; amps: number }> = [];
+  series.forEach((entry) => {
+    const last = merged[merged.length - 1];
+    if (last && last.timestamp.getTime() === entry.timestamp.getTime()) {
+      last.amps = Math.max(last.amps, entry.amps);
+    } else {
+      merged.push({ ...entry });
+    }
+  });
+  return merged;
 }
 
 function finalizeNsPowerSeries(records: IntervalDatum[], cadenceMinutes: number): MappingResult {

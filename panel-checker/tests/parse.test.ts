@@ -107,6 +107,27 @@ describe('NS Power SMOC parser', () => {
     assert.ok(result.data.length < preview.rows.length);
   });
 
+  it('merges duplicate timestamps by keeping the highest amperage', () => {
+    const preview = buildSmocPreview(
+      ['Interval Period End Timestamp Local', 'Max A(a)', 'Max A(c)'],
+      15,
+      370,
+      8,
+      10
+    );
+
+    const duplicatedRows = [...preview.rows];
+    duplicatedRows.push({ ...preview.rows[preview.rows.length - 1], 'Max A(a)': '30' });
+    duplicatedRows.push({ ...preview.rows[preview.rows.length - 3], 'Max A(c)': '25' });
+
+    const result = parseNsPowerSmocRows(preview.columns, duplicatedRows);
+
+    const uniqueTimestamps = new Set(result.data.map((item) => item.timestamp.getTime()));
+
+    assert.equal(result.data.length, uniqueTimestamps.size);
+    assert.ok(result.maxAmps >= 30);
+  });
+
   it('throws on malformed timestamps', () => {
     const preview: CsvPreview = {
       columns: ['Interval Period End Timestamp Local', 'Max A(a)', 'Max A(c)'],
