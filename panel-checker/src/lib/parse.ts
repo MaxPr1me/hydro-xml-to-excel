@@ -2,26 +2,22 @@ import { z } from 'zod';
 import Papa from 'papaparse';
 import { ColumnMapping, CsvPreview, IntervalDatum, IntervalUnit } from '../types';
 import { toIntervalDatum } from './units';
+import { loadXlsx, type ExcelDate, type SheetDataModule } from './xlsxLoader';
 
 const ACCEPTED_CADENCE = [15, 30, 60];
 const MS_PER_MINUTE = 60_000;
 const MS_PER_YEAR = 365 * 24 * 60 * MS_PER_MINUTE;
 const ESPI_NS = 'http://naesb.org/espi';
-const ZIP_LOCAL_FILE_HEADER = 0x04034b50;
-const ZIP_CENTRAL_DIRECTORY = 0x02014b50;
-const ZIP_END_OF_CENTRAL_DIRECTORY = 0x06054b50;
-
-type ZipEntry = {
-  name: string;
-  compression: number;
-  compressedSize: number;
-  uncompressedSize: number;
-  localHeaderOffset: number;
-};
+const MAX_EXCEL_ROWS = 100_000;
 
 const rowSchema = z.record(z.string(), z.string().optional());
 
 export type FileFormat = 'csv' | 'excel' | 'xml';
+
+export interface ExcelParseResult {
+  preview: CsvPreview;
+  warning?: string;
+}
 
 export function detectFileFormat(name: string, mime: string): FileFormat | null {
   const loweredName = name.toLowerCase();
@@ -62,29 +58,171 @@ export function parseCsv(text: string): CsvPreview {
   return { columns, rows };
 }
 
-export async function parseExcel(buffer: ArrayBuffer): Promise<CsvPreview> {
-  const zip = new SimpleZip(buffer);
-  const workbookXml = await zip.readText('xl/workbook.xml');
-  if (!workbookXml) {
-    throw new Error('Workbook metadata is missing.');
-  }
-  const workbookDoc = parseXml(workbookXml);
-  const sheetNode = workbookDoc.getElementsByTagName('sheet')[0];
-  if (!sheetNode) {
+export async function parseExcel(buffer: ArrayBuffer): Promise<ExcelParseResult> {
+  const xlsx = await loadXlsx();
+  const workbook = xlsx.read(buffer, { type: 'array', cellDates: true });
+  const firstSheetName = workbook.SheetNames[0];
+  if (!firstSheetName) {
     throw new Error('Workbook did not contain any worksheets.');
   }
-  const relId = sheetNode.getAttribute('r:id') ?? sheetNode.getAttribute('id');
-  const relsXml = await zip.readText('xl/_rels/workbook.xml.rels');
-  const sheetTarget = resolveSheetTarget(relsXml, relId);
-  const worksheetXml = await zip.readText(sheetTarget);
-  if (!worksheetXml) {
+  const sheet = workbook.Sheets[firstSheetName];
+  if (!sheet) {
     throw new Error('Worksheet data could not be read.');
   }
-  const sharedStringsXml = await zip.readText('xl/sharedStrings.xml');
-  const sharedStrings = sharedStringsXml ? extractSharedStrings(sharedStringsXml) : [];
-  const table = extractRowsFromWorksheet(worksheetXml, sharedStrings);
-  const csvText = tableToCsv(table);
-  return parseCsv(csvText);
+
+  const rows = xlsx.utils.sheet_to_json<(string | number | Date | null | undefined)[]>(sheet, {
+    header: 1,
+    raw: true,
+    defval: null,
+    blankrows: false
+  });
+
+  if (!rows.length) {
+    throw new Error('Worksheet is empty.');
+  }
+
+  const headerRow = Array.isArray(rows[0]) ? rows[0] : [];
+  const columns = ensureUniqueHeaders(
+    headerRow.map((cell, index) => {
+      if (cell === null || cell === undefined) {
+        return `Column ${index + 1}`;
+      }
+      if (cell instanceof Date) {
+        return cell.toISOString();
+      }
+      const normalized = cell.toString().trim();
+      return normalized || `Column ${index + 1}`;
+    })
+  );
+  if (!columns.length) {
+    throw new Error('The first row must include headers.');
+  }
+
+  const dataRows = rows.slice(1);
+  const limitedRows = dataRows.slice(0, MAX_EXCEL_ROWS);
+  const warning =
+    dataRows.length > MAX_EXCEL_ROWS
+      ? `Only the first ${MAX_EXCEL_ROWS.toLocaleString()} rows were processed to keep the browser responsive on GitHub Pages.`
+      : undefined;
+
+  const parsedRows: Record<string, string | undefined>[] = [];
+  limitedRows.forEach((row) => {
+    if (!Array.isArray(row) || !row.length) {
+      return;
+    }
+    const timestamp = normalizeTimestampCell(row[0], xlsx);
+    if (!timestamp) {
+      return;
+    }
+    const hasNumericValue = row.slice(1).some((cell) => isNumericLike(cell));
+    if (!hasNumericValue) {
+      return;
+    }
+
+    const record: Record<string, string | undefined> = {};
+    columns.forEach((column, index) => {
+      if (index === 0) {
+        record[column] = timestamp;
+        return;
+      }
+      const normalized = normalizeValueCell(row[index]);
+      if (normalized !== undefined) {
+        record[column] = normalized;
+      }
+    });
+    parsedRows.push(record);
+  });
+
+  if (!parsedRows.length) {
+    throw new Error('No usable rows were found in the first worksheet.');
+  }
+
+  return { preview: { columns, rows: parsedRows }, warning };
+}
+
+function normalizeTimestampCell(value: unknown, xlsx: SheetDataModule): string | undefined {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return excelSerialDateToIso(value, xlsx.SSF.parse_date_code);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+  return undefined;
+}
+
+function excelSerialDateToIso(value: number, parseDate: (num: number) => ExcelDate | null): string | undefined {
+  const parsed = parseDate(value);
+  if (!parsed) {
+    return undefined;
+  }
+  const milliseconds = Math.round(((parsed.S ?? 0) % 1) * 1000);
+  const date = new Date(
+    Date.UTC(
+      parsed.y ?? 0,
+      Math.max(0, (parsed.m ?? 1) - 1),
+      parsed.d ?? 1,
+      parsed.H ?? 0,
+      parsed.M ?? 0,
+      Math.floor(parsed.S ?? 0),
+      milliseconds
+    )
+  );
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  return date.toISOString();
+}
+
+function isNumericLike(value: unknown): boolean {
+  if (typeof value === 'number') {
+    return Number.isFinite(value);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return false;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed);
+  }
+  return false;
+}
+
+function normalizeValueCell(value: unknown): string | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value.toString() : undefined;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
+  }
+  return undefined;
+}
+
+export function ensureUniqueHeaders(raw: string[]): string[] {
+  const counts = new Map<string, number>();
+  return raw.map((value, index) => {
+    const base = value?.trim() || `Column ${index + 1}`;
+    const count = counts.get(base) ?? 0;
+    counts.set(base, count + 1);
+    return count === 0 ? base : `${base} (${count + 1})`;
+  });
 }
 
 export function parseGreenButtonXml(text: string): CsvPreview {
@@ -296,189 +434,4 @@ export function parseXml(text: string): Document {
     throw new Error('Uploaded file contains invalid XML.');
   }
   return doc;
-}
-
-export function resolveSheetTarget(relsXml: string | null, relId: string | null): string {
-  if (!relsXml || !relId) {
-    return 'xl/worksheets/sheet1.xml';
-  }
-  const doc = parseXml(relsXml);
-  const relationships = Array.from(doc.getElementsByTagName('Relationship'));
-  const match = relationships.find((node) => node.getAttribute('Id') === relId);
-  const target = match?.getAttribute('Target');
-  if (!target) {
-    return 'xl/worksheets/sheet1.xml';
-  }
-  const normalized = target.replace(/^\.\//, '').replace(/^\//, '');
-  return normalized.startsWith('xl/') ? normalized : `xl/${normalized}`;
-}
-
-export function extractSharedStrings(xml: string): string[] {
-  const doc = parseXml(xml);
-  const items = Array.from(doc.getElementsByTagName('si'));
-  return items.map((item) => {
-    const textNodes = Array.from(item.getElementsByTagName('t'));
-    if (textNodes.length) {
-      return textNodes.map((node) => node.textContent ?? '').join('');
-    }
-    return item.textContent ?? '';
-  });
-}
-
-export function extractRowsFromWorksheet(xml: string, sharedStrings: string[]): string[][] {
-  const doc = parseXml(xml);
-  const rows: string[][] = [];
-  const rowNodes = Array.from(doc.getElementsByTagName('row'));
-  rowNodes.forEach((rowNode) => {
-    const cells = Array.from(rowNode.getElementsByTagName('c'));
-    const rowValues: string[] = [];
-    let currentCol = 0;
-    cells.forEach((cell) => {
-      const ref = cell.getAttribute('r') ?? '';
-      const colLabel = ref.replace(/\d+/g, '');
-      const colIndex = colLabel ? columnLabelToIndex(colLabel) : currentCol;
-      while (currentCol < colIndex) {
-        rowValues.push('');
-        currentCol += 1;
-      }
-      const type = cell.getAttribute('t');
-      const rawValue = cell.getElementsByTagName('v')[0]?.textContent ?? '';
-      let finalValue = rawValue;
-      if (type === 's') {
-        finalValue = sharedStrings[Number(rawValue)] ?? '';
-      }
-      rowValues.push(finalValue ?? '');
-      currentCol += 1;
-    });
-    rows.push(rowValues);
-  });
-  return rows;
-}
-
-export function columnLabelToIndex(label: string): number {
-  let result = 0;
-  for (let i = 0; i < label.length; i += 1) {
-    const charCode = label.charCodeAt(i) - 64; // A -> 1
-    result = result * 26 + charCode;
-  }
-  return Math.max(0, result - 1);
-}
-
-export function tableToCsv(rows: string[][]): string {
-  if (!rows.length) {
-    throw new Error('Worksheet is empty.');
-  }
-  const headers = ensureUniqueHeaders(rows[0] ?? []);
-  if (!headers.length) {
-    throw new Error('The first row must include headers.');
-  }
-  const normalizedRows = rows
-    .slice(1)
-    .map((cells) => headers.map((_, index) => cells[index]?.toString().trim() ?? ''))
-    .filter((cells) => cells.some((cell) => cell.length));
-  const csvRows = [headers, ...normalizedRows];
-  return csvRows
-    .map((cells) => cells.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
-    .join('\n');
-}
-
-export function ensureUniqueHeaders(raw: string[]): string[] {
-  const counts = new Map<string, number>();
-  return raw.map((value, index) => {
-    const base = value?.trim() || `Column ${index + 1}`;
-    const count = counts.get(base) ?? 0;
-    counts.set(base, count + 1);
-    return count === 0 ? base : `${base} (${count + 1})`;
-  });
-}
-
-export class SimpleZip {
-  private readonly buffer: ArrayBuffer;
-
-  private readonly view: DataView;
-
-  private readonly entries: ZipEntry[];
-
-  constructor(buffer: ArrayBuffer) {
-    this.buffer = buffer;
-    this.view = new DataView(buffer);
-    this.entries = parseCentralDirectory(buffer);
-  }
-
-  async readText(name: string): Promise<string | null> {
-    const entry = this.entries.find((item) => item.name === name);
-    if (!entry) {
-      return null;
-    }
-    const bytes = await this.inflate(entry);
-    return new TextDecoder().decode(bytes);
-  }
-
-  private async inflate(entry: ZipEntry): Promise<Uint8Array> {
-    const compressed = this.slice(entry);
-    if (entry.compression === 0) {
-      return compressed;
-    }
-    if (entry.compression !== 8) {
-      throw new Error(`Unsupported XLSX compression method: ${entry.compression}`);
-    }
-    if (typeof DecompressionStream === 'undefined') {
-      throw new Error('Excel parsing requires a browser with DecompressionStream support.');
-    }
-    const stream = new DecompressionStream('deflate-raw' as CompressionFormat);
-    const writer = stream.writable.getWriter();
-    await writer.write(compressed as unknown as BufferSource);
-    await writer.close();
-    const result = await new Response(stream.readable).arrayBuffer();
-    return new Uint8Array(result);
-  }
-
-  private slice(entry: ZipEntry): Uint8Array {
-    const offset = entry.localHeaderOffset;
-    const signature = this.view.getUint32(offset, true);
-    if (signature !== ZIP_LOCAL_FILE_HEADER) {
-      throw new Error('Malformed XLSX archive.');
-    }
-    const nameLength = this.view.getUint16(offset + 26, true);
-    const extraLength = this.view.getUint16(offset + 28, true);
-    const dataStart = offset + 30 + nameLength + extraLength;
-    return new Uint8Array(this.buffer, dataStart, entry.compressedSize);
-  }
-}
-
-export function parseCentralDirectory(buffer: ArrayBuffer): ZipEntry[] {
-  const view = new DataView(buffer);
-  const endOffset = findEndOfCentralDirectory(view);
-  const directorySize = view.getUint32(endOffset + 12, true);
-  const directoryOffset = view.getUint32(endOffset + 16, true);
-  const entries: ZipEntry[] = [];
-  let cursor = directoryOffset;
-  const decoder = new TextDecoder();
-  while (cursor < directoryOffset + directorySize) {
-    const signature = view.getUint32(cursor, true);
-    if (signature !== ZIP_CENTRAL_DIRECTORY) {
-      break;
-    }
-    const compression = view.getUint16(cursor + 10, true);
-    const compressedSize = view.getUint32(cursor + 20, true);
-    const uncompressedSize = view.getUint32(cursor + 24, true);
-    const nameLength = view.getUint16(cursor + 28, true);
-    const extraLength = view.getUint16(cursor + 30, true);
-    const commentLength = view.getUint16(cursor + 32, true);
-    const localHeaderOffset = view.getUint32(cursor + 42, true);
-    const nameBytes = new Uint8Array(buffer, cursor + 46, nameLength);
-    const name = decoder.decode(nameBytes);
-    entries.push({ name, compression, compressedSize, uncompressedSize, localHeaderOffset });
-    cursor += 46 + nameLength + extraLength + commentLength;
-  }
-  return entries;
-}
-
-export function findEndOfCentralDirectory(view: DataView): number {
-  for (let offset = view.byteLength - 22; offset >= 0; offset -= 1) {
-    if (view.getUint32(offset, true) === ZIP_END_OF_CENTRAL_DIRECTORY) {
-      return offset;
-    }
-  }
-  throw new Error('Could not read XLSX archive.');
 }

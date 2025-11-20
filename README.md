@@ -21,8 +21,8 @@ _A bilingual UI will be added later._
 
 ## Features
 
-- ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files, converts spreadsheets to CSV for faster parsing, and mirrors the Green Button timezone/multiplier rules.
-- 🧵 XLSX parsing happens inside a dedicated Web Worker (`src/workers/excelParser.ts`) so large spreadsheets do not freeze the UI; the worker shares the `src/lib/parse.ts` helpers and times out after 20 seconds if the browser never responds.
+- ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files, mirrors the Green Button timezone/multiplier rules, and surfaces an amber warning when Excel uploads are truncated to ~100,000 rows for GitHub Pages performance.
+- 🧵 XLSX parsing happens inside a dedicated Web Worker (`src/workers/excelParser.ts`) so large spreadsheets do not freeze the UI; the worker streams the first worksheet through SheetJS, enforces the row cap, and times out after 20 seconds if the browser never responds.
 - ✅ Column mapper that validates cadence (15/30/60-minute), enforces a one-year window, and normalizes kWh/kW/Amps to amps using a 240 V
   recommended default.
 - 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable PNG images that mirror the on-screen view.
@@ -34,16 +34,15 @@ _A bilingual UI will be added later._
 ## Uploading interval data
 
 - **CSV uploads must stay plain text.** The uploader expects standard comma-separated text (UTF-8 or ASCII). Zipped CSVs, binary Excel exports, or files that were renamed from `.xlsx` to `.csv` will fail because the parser streams the file line-by-line.
-- **XLSX files are parsed in a worker.** Dragging an Excel workbook keeps you offline—the Web Worker inflates the ZIP, walks the worksheets, and streams the first sheet into the shared parsing helpers. Renaming a CSV to `.xlsx` does not gain any formatting support; the worker will surface an error as soon as it tries to unzip the fake workbook.
+- **XLSX files are parsed in a worker with SheetJS.** Dragging an Excel workbook keeps you offline while the worker reads the first worksheet with a header row and a timestamp/date in the first column. For GitHub Pages responsiveness, only the first ~100,000 data rows are processed and the uploader surfaces a truncation warning when that limit is reached. Renaming a CSV to `.xlsx` does not gain any formatting support.
 - **Green Button XML follows the official spec.** The parser keeps the timezone offset, multiplier, and quality flags intact so the mapper receives the raw values your utility provided.
 
 ## Troubleshooting Excel uploads
 
-- The uploader first streams XLSX bytes through the in-browser ZIP/worksheet parser in `src/lib/parse.ts`. This keeps everything
-  offline and preserves timezone or shared-string metadata.
-- Some browsers occasionally block ZIP inflation APIs or strip workbook metadata. When that happens you can enable the
+- The uploader streams XLSX bytes through the SheetJS-powered helper in `src/lib/parse.ts` and keeps the parsing inside the browser. The first worksheet is read client-side, and datasets beyond ~100,000 rows are truncated with an amber warning to avoid freezing GitHub Pages.
+- Some browsers occasionally block third-party scripts or strip workbook metadata. When that happens you can enable the
   **Auto-convert Excel if parsing fails** toggle underneath the uploader. After the first error the worker lazily converts the
-  first worksheet to CSV text and retries with the CSV parser.
+  first worksheet to CSV text via SheetJS and retries with the CSV parser.
 - Conversion flattens formulas, formats, and dates, so the UI surfaces an amber warning whenever the fallback is used. Only the
   first worksheet is converted, formula cells are evaluated once (no relative references), and Excel number formats may round the
   exported text. Check your timestamps/values after the retry and, if possible, upload a clean CSV export from the original tool
