@@ -30,6 +30,9 @@ export default function ReportCard({ analysis, verdict, chartRef }: Props) {
         `Manual amps (×1.25 baseline): ${(analysis.manualPeak.amps * 1.25).toFixed(1)} A`
       );
     }
+    if (analysis.mode === 'ns-power-smoc') {
+      summaryLines.push('NS Power SMOC: using Interval Period End Timestamp Local and the max of Max A(a)/Max A(c).');
+    }
     summaryLines.push(`Verdict: ${verdict.status}`, `Margin: ${verdict.availableMargin.toFixed(1)} A`);
     if (manualMode) {
       summaryLines.push('WARNING: No interval data uploaded – results based on user entry.');

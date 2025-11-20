@@ -1,4 +1,5 @@
 export type IntervalUnit = 'kWh' | 'kW' | 'Amps';
+export type UploadMode = 'flexible' | 'ns-power-smoc';
 
 export interface IntervalDatum {
   timestamp: Date;
@@ -22,6 +23,7 @@ export interface AnalysisState {
   source: AnalysisSource;
   data: IntervalDatum[];
   manualPeak?: ManualPeakEstimate | null;
+  mode?: UploadMode;
 }
 
 export interface CsvPreview {

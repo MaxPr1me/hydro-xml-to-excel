@@ -17,6 +17,7 @@ export const textEn = {
       'Confirm whether an electrical panel has the headroom needed for electrification projects. Import CSV, XLSX, or Green Button XML data, align the columns, and unlock the demand chart plus calculator.',
     bulletPoints: [
       'Validate cadence and units before relying on the data.',
+      'Pick Flexible mode for generic interval data or NS Power SMOC mode to auto-read timestamps and Max A columns.',
       'Plot a year of amps or kilowatt-hours to catch spikes and seasonal trends.',
       'Summarize diversified loads plus what-if appliances in one report.'
     ],

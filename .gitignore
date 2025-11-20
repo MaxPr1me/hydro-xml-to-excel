@@ -1,6 +1,7 @@
 # Build artifacts
 panel-checker/dist/
 panel-checker/tsconfig*.tsbuildinfo
+panel-checker/.tmp-tests/
 
 # Logs and OS cruft
 npm-debug.log*

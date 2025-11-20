@@ -30,7 +30,7 @@ export function calculateVerdict(inputs: PanelInputs, demandAmps: number): Panel
     availableMargin: available,
     status,
     message,
-    proposedLoads: inputs.newLoads.map((load) => ({
+    proposedLoads: inputs.newLoads.map((load: LoadEntry) => ({
       name: load.name,
       amps: load.amps,
       continuous: load.continuous
