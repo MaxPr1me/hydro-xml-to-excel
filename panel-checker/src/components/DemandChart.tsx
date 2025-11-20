@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import Plotly from 'plotly.js-dist-min';
+import type { Config, Data, Layout, ModeBarDefaultButtons } from 'plotly.js';
 import { IntervalDatum } from '../types';
 import { computeDemandStats } from '../lib/parse';
 import { convertToKwh } from '../lib/units';
@@ -53,7 +54,7 @@ export default function DemandChart({ data, chartRef }: Props) {
     );
     const peakLabel = peak.timestamp ? timestampFormatter.format(peak.timestamp) : '';
 
-    const trace: Plotly.Data = {
+    const trace: Data = {
       name: metric === 'amps' ? 'Amps' : 'kWh',
       x: filtered.map((datum) => datum.timestamp),
       y: series,
@@ -77,10 +78,10 @@ export default function DemandChart({ data, chartRef }: Props) {
             hovertemplate: peakLabel
               ? `Peak at ${peakLabel}<br>%{y:.2f} ${hoverSuffix}<extra></extra>`
               : `Peak %{y:.2f} ${hoverSuffix}<extra></extra>`
-          } satisfies Plotly.Data)
+          } satisfies Data)
         : null;
 
-    const layout: Partial<Plotly.Layout> = {
+    const layout: Partial<Layout> = {
       margin: { t: 32, r: 16, b: 48, l: 56 },
       paper_bgcolor: 'rgba(255,255,255,0)',
       plot_bgcolor: 'rgba(255,255,255,0)',
@@ -91,7 +92,7 @@ export default function DemandChart({ data, chartRef }: Props) {
       font: { family: 'Inter, sans-serif', color: '#021b33' }
     };
 
-    const traces: Plotly.Data[] = peakTrace ? [trace, peakTrace] : [trace];
+    const traces: Data[] = peakTrace ? [trace, peakTrace] : [trace];
     return { data: traces, layout };
   }, [derived, metric, timestampFormatter]);
 
@@ -99,8 +100,8 @@ export default function DemandChart({ data, chartRef }: Props) {
     () => ({
       responsive: true,
       displaylogo: false,
-      modeBarButtonsToRemove: ['select2d', 'lasso2d'] as Plotly.ModeBarDefaultButtons[]
-    }),
+      modeBarButtonsToRemove: ['select2d', 'lasso2d'] as ModeBarDefaultButtons[]
+    } satisfies Partial<Config>),
     []
   );
 
