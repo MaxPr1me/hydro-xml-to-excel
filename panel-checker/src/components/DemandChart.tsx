@@ -16,6 +16,10 @@ export default function DemandChart({ data, chartRef }: Props) {
   const ref = chartRef ?? fallbackRef;
   const [metric, setMetric] = useState<Metric>('amps');
   const stats = useMemo(() => computeDemandStats(data), [data]);
+  const timestampFormatter = useMemo(
+    () => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+    []
+  );
 
   const derived = useMemo(
     () =>
@@ -45,6 +49,7 @@ export default function DemandChart({ data, chartRef }: Props) {
       },
       { value: -Infinity, timestamp: null as Date | null }
     );
+    const peakLabel = peak.timestamp ? timestampFormatter.format(peak.timestamp) : '';
 
     const trace: Plotly.Data = {
       name: metric === 'amps' ? 'Amps' : 'kWh',
@@ -65,9 +70,11 @@ export default function DemandChart({ data, chartRef }: Props) {
             type: 'scatter',
             mode: 'text+markers',
             marker: { color: '#9cd956', size: 10 },
-            text: ['Peak'],
+            text: [peakLabel ? `Peak — ${peakLabel}` : 'Peak'],
             textposition: 'top center',
-            hovertemplate: `Peak %{y:.2f} ${hoverSuffix}<extra></extra>`
+            hovertemplate: peakLabel
+              ? `Peak at ${peakLabel}<br>%{y:.2f} ${hoverSuffix}<extra></extra>`
+              : `Peak %{y:.2f} ${hoverSuffix}<extra></extra>`
           } satisfies Plotly.Data)
         : null;
 
@@ -84,7 +91,7 @@ export default function DemandChart({ data, chartRef }: Props) {
 
     const traces: Plotly.Data[] = peakTrace ? [trace, peakTrace] : [trace];
     return { data: traces, layout };
-  }, [derived, metric]);
+  }, [derived, metric, timestampFormatter]);
 
   const chartConfig = useMemo(
     () => ({

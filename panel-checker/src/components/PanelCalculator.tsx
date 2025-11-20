@@ -8,7 +8,7 @@ interface Props {
   onVerdictChange?: (verdict: PanelVerdict) => void;
 }
 
-const serviceSizes = [100, 125, 150, 200, 225, 400];
+const serviceSizes = [60, 70, 80, 100, 125, 150, 200];
 
 export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
   const [inputs, setInputs] = useState<PanelInputs>({

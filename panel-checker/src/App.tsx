@@ -84,7 +84,7 @@ export default function App() {
           <p>{textEn.footer.bilingual}</p>
           <p>
             <a
-              href="https://github.com/MaxPr1me/hydro-xml-to-excel/blob/HEAD/LICENSE"
+              href="https://github.com/MaxPr1me/hydro-xml-to-excel/blob/ns/LICENSE"
               className="font-semibold underline"
             >
               {textEn.footer.license}
