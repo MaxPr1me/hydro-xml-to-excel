@@ -80,7 +80,7 @@ export async function renderDemandProfileSnapshot(options: SnapshotOptions): Pro
     context.fillText(line, padding, metricsTop + 12 + lineHeight * (index + 1));
   });
 
-  return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height };
+  return { dataUrl: canvas.toDataURL('image/jpeg', 0.92), width: canvas.width, height: canvas.height };
 }
 
 export function snapshotToBytes(snapshot: SnapshotResult): Uint8Array {
