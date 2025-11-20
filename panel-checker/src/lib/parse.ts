@@ -426,6 +426,28 @@ export function parseGreenButtonXml(text: string): CsvPreview {
   return { columns: ['timestamp', 'energy_kwh', 'amps'], rows };
 }
 
+export function resolveKnownXmlMapping(preview: CsvPreview): ColumnMapping | null {
+  const normalized = preview.columns.map((column) => column.trim().toLowerCase());
+  const timestampIndex = normalized.findIndex((column) => column === 'timestamp' || column.includes('interval'));
+  const energyIndex = normalized.findIndex((column) => column.includes('kwh') || column.includes('energy'));
+  const ampsIndex = normalized.findIndex((column) => column.includes('amp'));
+
+  const valueIndex = energyIndex >= 0 ? energyIndex : ampsIndex >= 0 ? ampsIndex : -1;
+
+  if (timestampIndex < 0 || valueIndex < 0 || valueIndex === timestampIndex) {
+    return null;
+  }
+
+  const unit: IntervalUnit = energyIndex >= 0 ? 'kWh' : 'Amps';
+
+  return {
+    timeColumn: preview.columns[timestampIndex],
+    valueColumn: preview.columns[valueIndex],
+    unit,
+    voltage: 240
+  };
+}
+
 export interface MappingResult {
   data: IntervalDatum[];
   cadenceMinutes: number;

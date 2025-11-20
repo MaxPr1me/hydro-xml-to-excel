@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 import { calculateVerdict, diversifiedLoad } from '../lib/calc';
 import { AnalysisState, IntervalDatum, LoadEntry, PanelInputs, PanelVerdict } from '../types';
+import InfoBubble from './InfoBubble';
+import { textEn } from '../content/text';
 
 interface Props {
   analysis: AnalysisState;
@@ -102,7 +104,10 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
               : 'We start from the absolute one-year max (×1.25) and apply 125% to continuous loads, 100% otherwise.'}
           </p>
         </div>
-        <span className={`rounded-full px-4 py-1 text-sm font-semibold ${verdictBadge}`}>{verdict.status}</span>
+        <div className="flex items-center gap-2">
+          <InfoBubble label="Help for panel calculator">{textEn.help.panel}</InfoBubble>
+          <span className={`rounded-full px-4 py-1 text-sm font-semibold ${verdictBadge}`}>{verdict.status}</span>
+        </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -111,7 +116,10 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={inputs.serviceRating}
-            onChange={(event) => setInputs((prev) => ({ ...prev, serviceRating: Number(event.target.value) }))}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              setInputs((prev) => ({ ...prev, serviceRating: value, mainBreaker: value }));
+            }}
           >
             {serviceSizes.map((size) => (
               <option key={size} value={size}>
@@ -127,7 +135,10 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
             type="number"
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={inputs.mainBreaker}
-            onChange={(event) => setInputs((prev) => ({ ...prev, mainBreaker: Number(event.target.value) }))}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              setInputs((prev) => ({ ...prev, mainBreaker: value }));
+            }}
             min={60}
           />
         </label>

@@ -3,6 +3,7 @@ import Plotly from 'plotly.js-dist-min';
 import { IntervalDatum } from '../types';
 import { computeDemandStats } from '../lib/parse';
 import { convertToKwh } from '../lib/units';
+import { renderDemandProfileSnapshot } from '../lib/snapshots';
 
 interface Props {
   data: IntervalDatum[];
@@ -15,6 +16,7 @@ export default function DemandChart({ data, chartRef }: Props) {
   const fallbackRef = useRef<HTMLDivElement | null>(null);
   const ref = chartRef ?? fallbackRef;
   const [metric, setMetric] = useState<Metric>('amps');
+  const [exportError, setExportError] = useState<string | null>(null);
   const stats = useMemo(() => computeDemandStats(data), [data]);
   const timestampFormatter = useMemo(
     () => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
@@ -114,14 +116,20 @@ export default function DemandChart({ data, chartRef }: Props) {
     };
   }, [chartDefinition, chartConfig, ref]);
 
-  const exportChart = () => {
+  const exportChart = async () => {
     if (!ref.current) return;
-    Plotly.downloadImage(ref.current, {
-      filename: `leeps-panel-screening-${metric}`,
-      format: 'png',
-      width: 1600,
-      height: 900
-    });
+    try {
+      setExportError(null);
+      const snapshot = await renderDemandProfileSnapshot({ chartElement: ref.current, data, metric });
+      const link = document.createElement('a');
+      link.href = snapshot.dataUrl;
+      link.download = `leeps-demand-profile-${metric}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      setExportError((error as Error).message || 'Unable to export the demand profile.');
+    }
   };
 
   return (
@@ -161,12 +169,14 @@ export default function DemandChart({ data, chartRef }: Props) {
             className="ml-4 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600"
             onClick={exportChart}
           >
-            Export PNG
+            Download demand profile PNG
           </button>
         </div>
       </header>
 
       <div ref={ref} className="h-[360px] w-full" aria-label="Demand chart" />
+
+      {exportError && <p className="text-sm text-rose-600">{exportError}</p>}
 
       {stats && (
         <div className="grid gap-4 text-sm text-slate-600 sm:grid-cols-3">

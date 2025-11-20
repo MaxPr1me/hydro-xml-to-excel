@@ -7,6 +7,8 @@ import {
   parseExcel,
   parseGreenButtonXml,
   parseNsPowerSmocRows,
+  mapRecords,
+  resolveKnownXmlMapping,
   type MappingResult
 } from '../lib/parse';
 import type { ExcelWorkerResponse } from '../workers/excelParser';
@@ -145,8 +147,25 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
           const preview = parseCsv(await file.text());
           onPreview(preview);
         } else {
+          setStatusMessage('Parsing XML data…');
           const preview = parseGreenButtonXml(await file.text());
-          onPreview(preview);
+          const mapping = resolveKnownXmlMapping(preview);
+
+          if (mapping) {
+            try {
+              const mapped = mapRecords(preview, mapping);
+              setStatusMessage('Recognized XML format — skipping manual mapping.');
+              onParsedData(mapped);
+            } catch (err) {
+              setError(
+                (err as Error).message || 'We could not auto-map the XML file. Map the columns manually to continue.'
+              );
+              onPreview(preview);
+            }
+          } else {
+            setError('XML parsed, but we could not detect the timestamp and kWh fields. Map them manually to continue.');
+            onPreview(preview);
+          }
         }
       } catch (err) {
         setError((err as Error).message || 'Unable to parse the file.');

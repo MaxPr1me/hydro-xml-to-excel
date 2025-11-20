@@ -56,7 +56,7 @@ function buildContent(options: SummaryPdfOptions) {
   cursorY -= 6;
   const chartWidth = 520;
   if (options.chartImage) {
-    const ratioHeight = Math.min(260, Math.round((chartWidth * options.chartImage.height) / options.chartImage.width));
+    const ratioHeight = Math.min(480, Math.round((chartWidth * options.chartImage.height) / options.chartImage.width));
     const chartY = cursorY - ratioHeight - 10;
     lines.push('q');
     lines.push(`${chartWidth} 0 0 ${ratioHeight} 50 ${chartY} cm`);
