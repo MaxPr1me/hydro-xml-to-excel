@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { excelBufferToCsv } from '../lib/convert';
-import { parseCsv, parseExcel } from '../lib/parse';
+import { parseCsv, parseExcel, type ExcelParseResult } from '../lib/parse';
 import type { CsvPreview } from '../types';
 
 export interface ExcelWorkerRequest {
@@ -13,6 +13,7 @@ export type ExcelWorkerSuccess = {
   jobId: number;
   type: 'success';
   preview: CsvPreview;
+  warning?: string;
   usedConversion: boolean;
 };
 
@@ -29,8 +30,8 @@ const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobal
 ctx.onmessage = async (event: MessageEvent<ExcelWorkerRequest>) => {
   const { jobId, buffer, allowConversion } = event.data;
   try {
-    const preview = await parseExcel(buffer);
-    const payload: ExcelWorkerSuccess = { jobId, type: 'success', preview, usedConversion: false };
+    const { preview, warning }: ExcelParseResult = await parseExcel(buffer);
+    const payload: ExcelWorkerSuccess = { jobId, type: 'success', preview, warning, usedConversion: false };
     ctx.postMessage(payload);
   } catch (error) {
     if (allowConversion) {
@@ -41,6 +42,7 @@ ctx.onmessage = async (event: MessageEvent<ExcelWorkerRequest>) => {
           jobId,
           type: 'success',
           preview,
+          warning: undefined,
           usedConversion: true
         };
         ctx.postMessage(payload);
