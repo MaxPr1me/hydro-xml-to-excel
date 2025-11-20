@@ -1,8 +1,8 @@
 import { type MutableRefObject } from 'react';
-import Plotly from 'plotly.js-dist-min';
 import { AnalysisState, PanelVerdict } from '../types';
 import { computeDemandStats } from '../lib/parse';
-import { buildSummaryPdf, dataUrlToBytes } from '../lib/pdf';
+import { buildSummaryPdf } from '../lib/pdf';
+import { renderDemandProfileSnapshot, snapshotToBytes } from '../lib/snapshots';
 
 interface Props {
   analysis: AnalysisState;
@@ -33,6 +33,7 @@ export default function ReportCard({ analysis, verdict, chartRef }: Props) {
     if (analysis.mode === 'ns-power-smoc') {
       summaryLines.push('NS Power SMOC: using Interval Period End Timestamp Local and the max of Max A(a)/Max A(c).');
     }
+    summaryLines.push('Demand profile snapshot included below.');
     summaryLines.push(`Verdict: ${verdict.status}`, `Margin: ${verdict.availableMargin.toFixed(1)} A`);
     if (manualMode) {
       summaryLines.push('WARNING: No interval data uploaded – results based on user entry.');
@@ -47,17 +48,16 @@ export default function ReportCard({ analysis, verdict, chartRef }: Props) {
       : [];
 
     let chartImageBytes: Uint8Array | null = null;
-    const chartWidth = 1600;
-    const chartHeight = 900;
+    let chartDimensions: { width: number; height: number } | null = null;
     if (!manualMode && chartRef?.current) {
       try {
-        const dataUrl = (await Plotly.toImage(chartRef.current, {
-          format: 'jpeg',
-          width: chartWidth,
-          height: chartHeight,
-          scale: 2
-        })) as string;
-        chartImageBytes = dataUrlToBytes(dataUrl);
+        const snapshot = await renderDemandProfileSnapshot({
+          chartElement: chartRef.current,
+          data,
+          metric: 'amps'
+        });
+        chartImageBytes = snapshotToBytes(snapshot);
+        chartDimensions = { width: snapshot.width, height: snapshot.height };
       } catch (error) {
         // eslint-disable-next-line no-console
         console.warn('Unable to capture chart image for PDF export', error);
@@ -72,8 +72,8 @@ export default function ReportCard({ analysis, verdict, chartRef }: Props) {
         ? 'Strong disclaimer: Manual peak entry only. Verify against utility-provided interval data before relying on this report.'
         : 'Screening tool only — always confirm against the Canadian Electrical Code, NEC, and utility requirements.',
       chartImage:
-        chartImageBytes && chartImageBytes.length
-          ? { data: chartImageBytes, width: chartWidth, height: chartHeight }
+        chartImageBytes && chartDimensions
+          ? { data: chartImageBytes, width: chartDimensions.width, height: chartDimensions.height }
           : undefined,
       placeholderMessage: manualMode
         ? 'No interval data provided – graph not available. Attach manual peak documentation.'

@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { describe, it } from 'node:test';
-import { guessTimestampColumn, inferCadenceMinutes, parseNsPowerSmocRows } from '../src/lib/parse.js';
+import { guessTimestampColumn, inferCadenceMinutes, parseNsPowerSmocRows, resolveKnownXmlMapping } from '../src/lib/parse.js';
 import type { CsvPreview } from '../src/types.js';
 
 function formatLocalTimestamp(date: Date): string {
@@ -56,6 +56,35 @@ describe('timestamp detection', () => {
     };
     const detected = guessTimestampColumn(preview);
     assert.equal(detected, 'reading time');
+  });
+});
+
+describe('XML auto-mapping detection', () => {
+  it('returns a mapping for canonical Green Button previews', () => {
+    const preview: CsvPreview = {
+      columns: ['timestamp', 'energy_kwh', 'amps'],
+      rows: [
+        { timestamp: '2024-01-01T00:00:00Z', energy_kwh: '0.5', amps: '4.2' },
+        { timestamp: '2024-01-01T01:00:00Z', energy_kwh: '0.4', amps: '3.9' }
+      ]
+    };
+
+    const mapping = resolveKnownXmlMapping(preview);
+    assert.ok(mapping);
+    assert.equal(mapping?.timeColumn, 'timestamp');
+    assert.equal(mapping?.valueColumn, 'energy_kwh');
+    assert.equal(mapping?.unit, 'kWh');
+    assert.equal(mapping?.voltage, 240);
+  });
+
+  it('returns null when timestamp or value columns cannot be inferred', () => {
+    const preview: CsvPreview = {
+      columns: ['foo', 'bar'],
+      rows: [{ foo: 'a', bar: 'b' }]
+    };
+
+    const mapping = resolveKnownXmlMapping(preview);
+    assert.equal(mapping, null);
   });
 });
 

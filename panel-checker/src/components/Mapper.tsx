@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ColumnMapping, CsvPreview, IntervalUnit } from '../types';
 import { guessTimestampColumn, guessValueColumn, mapRecords, type MappingResult } from '../lib/parse';
+import InfoBubble from './InfoBubble';
+import { textEn } from '../content/text';
 
 interface Props {
   preview: CsvPreview;
@@ -46,11 +48,12 @@ export default function Mapper({ preview, onComplete }: Props) {
 
   return (
     <section className="space-y-3 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Map your columns</h2>
           <p className="text-sm text-slate-600">Choose the timestamp and measurement fields.</p>
         </div>
+        <InfoBubble label="Help for column mapping">{textEn.help.mapper}</InfoBubble>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
