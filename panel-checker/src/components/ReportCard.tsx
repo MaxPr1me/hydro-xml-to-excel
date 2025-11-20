@@ -2,62 +2,52 @@ import { type MutableRefObject } from 'react';
 import { AnalysisState, PanelVerdict } from '../types';
 import { computeDemandStats } from '../lib/parse';
 import { buildSummaryPdf } from '../lib/pdf';
-import { renderDemandProfileSnapshot, snapshotToBytes } from '../lib/snapshots';
+import { renderDemandProfileSnapshot, renderElementSnapshot, snapshotToBytes } from '../lib/snapshots';
 
 interface Props {
   analysis: AnalysisState;
   verdict: PanelVerdict;
   chartRef?: MutableRefObject<HTMLDivElement | null>;
+  demandSectionRef?: MutableRefObject<HTMLElement | null>;
+  reportSectionRef?: MutableRefObject<HTMLElement | null>;
 }
 
-export default function ReportCard({ analysis, verdict, chartRef }: Props) {
+export default function ReportCard({ analysis, verdict, chartRef, demandSectionRef, reportSectionRef }: Props) {
   const data = analysis.data;
   const stats = computeDemandStats(data);
   const manualMode = analysis.source === 'manual' && !!analysis.manualPeak;
 
   const downloadReport = async () => {
-    const summaryLines: string[] = [];
-    if (stats) {
-      summaryLines.push(
-        `Coverage: ${stats.start.toLocaleDateString()} — ${stats.end.toLocaleDateString()}`,
-        `Cadence: ${stats.cadenceMinutes}-minute intervals`,
-        `Peak amps: ${stats.maxAmps.toFixed(1)} A`
-      );
-    } else if (manualMode && analysis.manualPeak) {
-      summaryLines.push(
-        `Manual peak (kWh): ${analysis.manualPeak.kwh}`,
-        `Manual cadence: ${analysis.manualPeak.intervalMinutes}-minute interval`,
-        `Manual amps (×1.25 baseline): ${(analysis.manualPeak.amps * 1.25).toFixed(1)} A`
-      );
-    }
-    if (analysis.mode === 'ns-power-smoc') {
-      summaryLines.push('NS Power SMOC: using Interval Period End Timestamp Local and the max of Max A(a)/Max A(c).');
-    }
-    summaryLines.push('Demand profile snapshot included below.');
-    summaryLines.push(`Verdict: ${verdict.status}`, `Margin: ${verdict.availableMargin.toFixed(1)} A`);
-    if (manualMode) {
-      summaryLines.push('WARNING: No interval data uploaded – results based on user entry.');
+    let reportImage: { data: Uint8Array; width: number; height: number } | undefined;
+    if (reportSectionRef?.current) {
+      try {
+        const snapshot = await renderElementSnapshot({ element: reportSectionRef.current });
+        reportImage = { data: snapshotToBytes(snapshot), width: snapshot.width, height: snapshot.height };
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.warn('Unable to capture report section for PDF', error);
+      }
     }
 
-    const loads = verdict.proposedLoads.length
-      ? verdict.proposedLoads.map((load) => {
-          const label = load.name?.trim() || 'Load';
-          const suffix = load.continuous ? ' (continuous)' : '';
-          return `• ${label}: ${load.amps.toFixed(1)} A${suffix}`;
-        })
-      : [];
+    let demandImage: { data: Uint8Array; width: number; height: number } | undefined;
+    if (demandSectionRef?.current) {
+      try {
+        const snapshot = await renderElementSnapshot({ element: demandSectionRef.current });
+        demandImage = { data: snapshotToBytes(snapshot), width: snapshot.width, height: snapshot.height };
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.warn('Unable to capture demand section for PDF', error);
+      }
+    }
 
-    let chartImageBytes: Uint8Array | null = null;
-    let chartDimensions: { width: number; height: number } | null = null;
-    if (!manualMode && chartRef?.current) {
+    if (!demandImage && !manualMode && chartRef?.current) {
       try {
         const snapshot = await renderDemandProfileSnapshot({
           chartElement: chartRef.current,
           data,
           metric: 'amps'
         });
-        chartImageBytes = snapshotToBytes(snapshot);
-        chartDimensions = { width: snapshot.width, height: snapshot.height };
+        demandImage = { data: snapshotToBytes(snapshot), width: snapshot.width, height: snapshot.height };
       } catch (error) {
         // eslint-disable-next-line no-console
         console.warn('Unable to capture chart image for PDF export', error);
@@ -65,19 +55,24 @@ export default function ReportCard({ analysis, verdict, chartRef }: Props) {
     }
 
     const pdfBlob = buildSummaryPdf({
-      title: 'LEEP SPARK Tool – Demonstrate load summary',
-      summaryLines,
-      loads,
+      documentTitle: 'LEEP SPARK Tool – Demonstrate load summary',
+      sections: [
+        {
+          title: 'One-page report',
+          image: reportImage,
+          placeholder: 'Unable to capture the report preview. Please take a screenshot as backup.'
+        },
+        {
+          title: 'Demand profile',
+          image: demandImage,
+          placeholder: manualMode
+            ? 'No interval data provided – demand profile not available.'
+            : 'Chart capture unavailable. Take a screenshot of the demand profile as backup.'
+        }
+      ],
       disclaimer: manualMode
         ? 'Strong disclaimer: Manual peak entry only. Verify against utility-provided interval data before relying on this report.'
-        : 'Screening tool only — always confirm against the Canadian Electrical Code, NEC, and utility requirements.',
-      chartImage:
-        chartImageBytes && chartDimensions
-          ? { data: chartImageBytes, width: chartDimensions.width, height: chartDimensions.height }
-          : undefined,
-      placeholderMessage: manualMode
-        ? 'No interval data provided – graph not available. Attach manual peak documentation.'
-        : 'Chart capture unavailable. Take a screenshot of the demand profile as backup.'
+        : 'Screening tool only — always confirm against the Canadian Electrical Code, NEC, and utility requirements.'
     });
 
     const link = document.createElement('a');
@@ -90,7 +85,7 @@ export default function ReportCard({ analysis, verdict, chartRef }: Props) {
   };
 
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+    <section ref={reportSectionRef} className="space-y-3 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">One-page report</h2>
@@ -102,6 +97,7 @@ export default function ReportCard({ analysis, verdict, chartRef }: Props) {
             void downloadReport();
           }}
           className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+          data-export-exclude="true"
         >
           Download summary
         </button>

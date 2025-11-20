@@ -17,6 +17,12 @@ export interface SnapshotResult {
   height: number;
 }
 
+interface ElementSnapshotOptions {
+  element: HTMLElement;
+  backgroundColor?: string;
+  pixelRatio?: number;
+}
+
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -85,4 +91,84 @@ export async function renderDemandProfileSnapshot(options: SnapshotOptions): Pro
 
 export function snapshotToBytes(snapshot: SnapshotResult): Uint8Array {
   return dataUrlToBytes(snapshot.dataUrl);
+}
+
+function cloneWithInlineStyles(node: HTMLElement): HTMLElement {
+  const clone = node.cloneNode(true) as HTMLElement;
+  const stack: Array<{ source: HTMLElement; target: HTMLElement }> = [{ source: node, target: clone }];
+
+  while (stack.length) {
+    const { source, target } = stack.pop() as { source: HTMLElement; target: HTMLElement };
+    const style = getComputedStyle(source);
+    for (const property of style) {
+      target.style.setProperty(property, style.getPropertyValue(property), style.getPropertyPriority(property));
+    }
+
+    Array.from(source.childNodes).forEach((child, index) => {
+      const targetChild = target.childNodes[index];
+      if (child.nodeType === Node.ELEMENT_NODE && targetChild instanceof HTMLElement) {
+        stack.push({ source: child as HTMLElement, target: targetChild });
+      }
+    });
+  }
+
+  return clone;
+}
+
+function pruneExcludedElements(element: HTMLElement) {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_ELEMENT);
+  const toRemove: Element[] = [];
+
+  let current: HTMLElement | null = element;
+  while (current) {
+    if (current.dataset?.exportExclude === 'true') {
+      toRemove.push(current);
+    }
+    current = walker.nextNode() as HTMLElement | null;
+  }
+
+  toRemove.forEach((node) => node.remove());
+}
+
+export async function renderElementSnapshot({
+  element,
+  backgroundColor = '#ffffff',
+  pixelRatio = 2
+}: ElementSnapshotOptions): Promise<SnapshotResult> {
+  const rect = element.getBoundingClientRect();
+  const width = Math.max(1, Math.ceil(rect.width || element.offsetWidth));
+  const height = Math.max(1, Math.ceil(rect.height || element.offsetHeight));
+
+  const cloned = cloneWithInlineStyles(element);
+  pruneExcludedElements(cloned);
+
+  const serializer = new XMLSerializer();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('width', `${width}`);
+  svg.setAttribute('height', `${height}`);
+
+  const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  foreignObject.setAttribute('width', '100%');
+  foreignObject.setAttribute('height', '100%');
+  foreignObject.appendChild(cloned);
+  svg.appendChild(foreignObject);
+
+  const svgString = serializer.serializeToString(svg);
+  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+  const svgImage = await loadImage(dataUrl);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * pixelRatio));
+  canvas.height = Math.max(1, Math.round(height * pixelRatio));
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Unable to prepare the export canvas.');
+  }
+
+  context.fillStyle = backgroundColor;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(svgImage, 0, 0, canvas.width, canvas.height);
+
+  return { dataUrl: canvas.toDataURL('image/jpeg', 0.92), width: canvas.width, height: canvas.height };
 }
