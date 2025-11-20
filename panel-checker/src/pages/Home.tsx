@@ -14,7 +14,7 @@ export default function Home({ onAnalysisReady }: Props) {
   const [preview, setPreview] = useState<CsvPreview | null>(null);
   const [result, setResult] = useState<MappingResult | null>(null);
   const [manualPeakKwh, setManualPeakKwh] = useState('');
-  const [manualCadence, setManualCadence] = useState(15);
+  const [manualCadence, setManualCadence] = useState(60);
   const [manualVoltage, setManualVoltage] = useState<120 | 208 | 240>(240);
   const [manualError, setManualError] = useState<string | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
