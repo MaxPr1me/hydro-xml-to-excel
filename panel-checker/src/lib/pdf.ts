@@ -37,10 +37,10 @@ function escapePdfText(text: string) {
   return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
-function buildSectionContent(
+function buildCombinedSectionsContent(
   documentTitle: string,
-  section: SummarySection,
-  imageName: string | null,
+  sections: SummarySection[],
+  imageNames: Array<string | null>,
   disclaimer?: string
 ) {
   const lines: string[] = [];
@@ -51,39 +51,48 @@ function buildSectionContent(
   lines.push(`50 ${cursorY} Td`);
   lines.push(`(${escapePdfText(documentTitle)}) Tj`);
   lines.push('ET');
-  cursorY -= 24;
-
-  lines.push('BT');
-  lines.push('/F1 13 Tf');
-  lines.push(`50 ${cursorY} Td`);
-  lines.push(`(${escapePdfText(section.title)}) Tj`);
-  lines.push('ET');
-  cursorY -= 20;
+  cursorY -= 28;
 
   const contentWidth = 512;
-  const maxHeight = 640;
+  const availableHeight = cursorY - (disclaimer ? 70 : 60);
+  const maxSectionHeight = Math.max(180, Math.floor(availableHeight / sections.length) - 20);
 
-  if (section.image && imageName) {
-    const scaledHeight = Math.min(maxHeight, Math.round((contentWidth * section.image.height) / section.image.width));
-    const imageY = Math.max(cursorY - scaledHeight, 80);
+  sections.forEach((section, index) => {
+    if (index > 0) {
+      cursorY -= 16;
+    }
 
-    lines.push('q');
-    lines.push(`${contentWidth} 0 0 ${scaledHeight} 50 ${imageY} cm`);
-    lines.push(`/${imageName} Do`);
-    lines.push('Q');
-    cursorY = imageY - 20;
-  } else if (section.placeholder) {
-    const placeholderHeight = 200;
-    const placeholderY = Math.max(cursorY - placeholderHeight, 80);
-    lines.push('0.95 0.96 0.98 rg');
-    lines.push(`50 ${placeholderY} ${contentWidth} ${placeholderHeight} re f`);
     lines.push('BT');
-    lines.push('/F1 11 Tf');
-    lines.push(`60 ${placeholderY + placeholderHeight / 2} Td`);
-    lines.push(`(${escapePdfText(section.placeholder)}) Tj`);
+    lines.push('/F1 13 Tf');
+    lines.push(`50 ${cursorY} Td`);
+    lines.push(`(${escapePdfText(section.title)}) Tj`);
     lines.push('ET');
-    cursorY = placeholderY - 20;
-  }
+    cursorY -= 18;
+
+    const imageName = imageNames[index];
+
+    if (section.image && imageName) {
+      const scaledHeight = Math.min(maxSectionHeight, Math.round((contentWidth * section.image.height) / section.image.width));
+      const imageY = Math.max(cursorY - scaledHeight, 80);
+
+      lines.push('q');
+      lines.push(`${contentWidth} 0 0 ${scaledHeight} 50 ${imageY} cm`);
+      lines.push(`/${imageName} Do`);
+      lines.push('Q');
+      cursorY = imageY - 14;
+    } else if (section.placeholder) {
+      const placeholderHeight = Math.min(maxSectionHeight, 160);
+      const placeholderY = Math.max(cursorY - placeholderHeight, 80);
+      lines.push('0.95 0.96 0.98 rg');
+      lines.push(`50 ${placeholderY} ${contentWidth} ${placeholderHeight} re f`);
+      lines.push('BT');
+      lines.push('/F1 11 Tf');
+      lines.push(`60 ${placeholderY + placeholderHeight / 2} Td`);
+      lines.push(`(${escapePdfText(section.placeholder)}) Tj`);
+      lines.push('ET');
+      cursorY = placeholderY - 14;
+    }
+  });
 
   if (disclaimer) {
     lines.push('BT');
@@ -113,15 +122,13 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
 
   let nextId = 4;
   const imageIds = options.sections.map((section) => (section.image ? nextId++ : null));
-  const contentIds = options.sections.map(() => nextId++);
-  const pageIds = options.sections.map(() => nextId++);
+  const contentId = nextId++;
+  const pageId = nextId++;
 
-  const kidsRefs = pageIds.map((id) => `${id} 0 R`).join(' ');
+  const kidsRefs = `${pageId} 0 R`;
 
   const catalog = encode(`${catalogId} 0 obj\n<< /Type /Catalog /Pages ${pagesId} 0 R >>\nendobj\n`);
-  const pages = encode(
-    `${pagesId} 0 obj\n<< /Type /Pages /Kids [${kidsRefs}] /Count ${pageIds.length} >>\nendobj\n`
-  );
+  const pages = encode(`${pagesId} 0 obj\n<< /Type /Pages /Kids [${kidsRefs}] /Count 1 >>\nendobj\n`);
   const font = encode(`${fontId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`);
 
   const addObject = (id: number, bytes: Uint8Array) => {
@@ -149,36 +156,43 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
         )
       );
     }
-
-    const imageName = imageId ? `Im${index + 1}` : null;
-    const contentString = buildSectionContent(
-      options.documentTitle,
-      section,
-      imageName,
-      index === options.sections.length - 1 ? options.disclaimer : undefined
-    );
-    const contentBytes = encode(contentString);
-    const content = concatBytes(
-      encode(`${contentIds[index]} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`),
-      contentBytes,
-      encode('\nendstream\nendobj\n')
-    );
-
-    addObject(contentIds[index], content);
-
-    const resourceParts = [`/Font << /F1 ${fontId} 0 R >>`];
-    if (imageId && imageName) {
-      resourceParts.push(`/XObject << /${imageName} ${imageId} 0 R >>`);
-    }
-
-    const resources = resourceParts.join(' ');
-    addObject(
-      pageIds[index],
-      encode(
-        `${pageIds[index]} 0 obj\n<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << ${resources} >> /Contents ${contentIds[index]} 0 R >>\nendobj\n`
-      )
-    );
   });
+
+  const imageNames = options.sections.map((section, index) => (section.image ? `Im${index + 1}` : null));
+  const contentString = buildCombinedSectionsContent(
+    options.documentTitle,
+    options.sections,
+    imageNames,
+    options.disclaimer
+  );
+  const contentBytes = encode(contentString);
+  const content = concatBytes(
+    encode(`${contentId} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`),
+    contentBytes,
+    encode('\nendstream\nendobj\n')
+  );
+
+  addObject(contentId, content);
+
+  const resourceParts = [`/Font << /F1 ${fontId} 0 R >>`];
+  const xObjectEntries = imageNames
+    .map((name, index) => {
+      const imageId = imageIds[index];
+      return name && imageId ? `/${name} ${imageId} 0 R` : null;
+    })
+    .filter(Boolean)
+    .join(' ');
+  if (xObjectEntries) {
+    resourceParts.push(`/XObject << ${xObjectEntries} >>`);
+  }
+
+  const resources = resourceParts.join(' ');
+  addObject(
+    pageId,
+    encode(
+      `${pageId} 0 obj\n<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << ${resources} >> /Contents ${contentId} 0 R >>\nendobj\n`
+    )
+  );
 
   const xrefStart = position;
   const totalObjects = nextId - 1;

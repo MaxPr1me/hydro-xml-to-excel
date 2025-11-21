@@ -55,7 +55,7 @@ export default function ReportCard({ analysis, verdict, chartRef, demandSectionR
     }
 
     const pdfBlob = buildSummaryPdf({
-      documentTitle: 'LEEP SPARK Tool – Demonstrate load summary',
+      documentTitle: 'LEEP SPARK Tool - Demonstrate Load Report',
       sections: [
         {
           title: 'One-page report',
