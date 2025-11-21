@@ -25,11 +25,10 @@ _A bilingual UI will be added later._
 - 🧵 XLSX parsing happens inside a dedicated Web Worker (`src/workers/excelParser.ts`) so large spreadsheets do not freeze the UI; the worker streams the first worksheet through SheetJS, enforces the row cap, and times out after 20 seconds if the browser never responds.
 - ✅ Column mapper that validates cadence (15/30/60-minute), enforces a one-year window, and normalizes kWh/kW/Amps to amps using a 240 V
   recommended default.
-- 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable PNG images that capture the full on-screen demand profile section.
+- 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable PNG images that mirror the on-screen view.
 - 🧮 Plain-language panel calculator that anchors to the absolute one-year max (×1.25), differentiates continuous vs. non-continuous loads, and lets you stack what-if scenarios.
 - 🧾 Manual entry path that converts a user-supplied peak kWh reading into amps so crews can run the calculator even when no file is available; the UI clearly flags these runs as unverified and disables the graph.
-- 📄 Download-ready PDF summary that combines the one-page report and the demand profile snapshot (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout.
-- 🔎 Recognized Green Button XML uploads auto-map timestamp and energy fields so validated files can jump straight to results without manual column mapping; unfamiliar XML still routes through the mapper with clear guidance.
+- 📄 Download-ready PDF summary that embeds the demand profile chart (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout.
 - 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
 - 🔀 Mode toggle for generic Flexible interval data vs. NS Power SMOC XLSX exports; the SMOC path reads "Interval Period End Timestamp Local" and uses the higher of Max A(a)/Max A(c) per interval.
 
@@ -69,7 +68,7 @@ These steps assume you are comfortable cloning a repo but want very explicit dir
 order; check off each step before moving on.
 
 1. **Fork the repo on GitHub.** Click the Fork button on the top-right of the repository page so you have your own copy.
-2. **Clone your fork.** In a terminal run `git clone <your-fork-url>` and then `cd hydro-xml-to-excel`.
+2. **Clone your fork.** In a terminal run `git clone <your-fork-url>` and then `cd <your-repo-name>`.
 3. **Install Node.js 18+ if needed.** Download it from [nodejs.org](https://nodejs.org/) and rerun the previous step once
    `node -v` works.
 4. **Install dependencies.** Run `cd panel-checker && npm install`. This grabs React, Vite, Plotly, etc.
@@ -96,8 +95,8 @@ order; check off each step before moving on.
 
 ## Preview the GitHub Pages path locally
 
-GitHub Pages hosts this Vite build under a `/hydro-xml-to-excel/` subpath (or the name of your fork). Because the app emits
-relative URLs you can mimic that subpath locally before pushing:
+GitHub Pages hosts this Vite build under a `/repo-name/` subpath (the name of your fork). Because the app emits relative URLs you
+can mimic that subpath locally before pushing:
 
 ```bash
 cd panel-checker
@@ -106,9 +105,13 @@ npm run build
 npm run preview
 ```
 
-Then visit `http://localhost:4173/hydro-xml-to-excel/` (replace `hydro-xml-to-excel` with your repository name if you forked the
-project). The preview server falls back to `index.html` for deep links, so browsing to that prefixed URL mirrors GitHub Pages and
-confirms that icons, the manifest, and bundled JavaScript load from relative paths.
+Then visit `http://localhost:4173/<repo-name>/` (replace `<repo-name>` with your repository name if you forked the project).
+The preview server falls back to `index.html` for deep links, so browsing to that prefixed URL mirrors GitHub Pages and confirms
+that icons, the manifest, and bundled JavaScript load from relative paths.
+
+If you publish under a custom domain or keep a non-`main` default branch, set `VITE_REPO_URL=https://github.com/<owner>/<repo>`
+and `VITE_DEFAULT_BRANCH=<branch-name>` before running `npm run build`. The in-app license link uses those values to point at
+the correct repository and branch when it cannot infer them from a `*.github.io/<repo>/` host.
 
 ## Repository layout
 

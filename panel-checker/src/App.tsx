@@ -5,6 +5,7 @@ import Results from './pages/Results';
 import { AnalysisState } from './types';
 import { textEn } from './content/text';
 import { initAnalytics, trackToolLoaded } from './analytics';
+import { buildLicenseUrl } from './utils/repoLinks';
 
 const tabs = [
   { id: 'upload', label: textEn.nav.upload, path: '/' },
@@ -90,7 +91,7 @@ export default function App() {
           <p>{textEn.footer.bilingual}</p>
           <p>
             <a
-              href="https://github.com/MaxPr1me/hydro-xml-to-excel/blob/ns/LICENSE"
+              href={buildLicenseUrl()}
               className="font-semibold underline"
             >
               {textEn.footer.license}
