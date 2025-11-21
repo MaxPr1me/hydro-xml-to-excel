@@ -19,6 +19,12 @@ export function initAnalytics() {
   }
 
   window.dataLayer = window.dataLayer || [];
+  const hasInlineConfig = Array.isArray(window.dataLayer)
+    ? window.dataLayer.some(
+        (entry) => Array.isArray(entry) && entry[0] === 'config' && entry[1] === GA_MEASUREMENT_ID
+      )
+    : false;
+
   function gtag(...args: any[]) {
     window.dataLayer?.push(args);
   }
@@ -37,8 +43,10 @@ export function initAnalytics() {
     document.head.appendChild(script);
   }
 
-  window.gtag('js', new Date());
-  window.gtag('config', GA_MEASUREMENT_ID, { send_page_view: true });
+  if (!hasInlineConfig) {
+    window.gtag('js', new Date());
+    window.gtag('config', GA_MEASUREMENT_ID, { send_page_view: true });
+  }
 
   initialized = true;
 }
