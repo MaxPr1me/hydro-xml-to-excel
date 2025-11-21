@@ -5,6 +5,7 @@ import { IntervalDatum } from '../types';
 import { computeDemandStats } from '../lib/parse';
 import { convertToKwh } from '../lib/units';
 import { renderDemandProfileSnapshot } from '../lib/snapshots';
+import { trackAnalysisError, trackSummaryDownload } from '../analytics';
 
 interface Props {
   data: IntervalDatum[];
@@ -123,6 +124,7 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
     try {
       setExportError(null);
       const snapshot = await renderDemandProfileSnapshot({ chartElement: ref.current, data, metric });
+      trackSummaryDownload({ format: 'png', method: 'verified', hasData: true });
       const link = document.createElement('a');
       link.href = snapshot.dataUrl;
       link.download = `leeps-demand-profile-${metric}.png`;
@@ -131,6 +133,7 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
       document.body.removeChild(link);
     } catch (error) {
       setExportError((error as Error).message || 'Unable to export the demand profile.');
+      trackAnalysisError({ stage: 'pdf', errorCode: 'PNG_EXPORT_FAILED' });
     }
   };
 

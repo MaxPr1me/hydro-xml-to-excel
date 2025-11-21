@@ -12,6 +12,7 @@ import {
   type MappingResult
 } from '../lib/parse';
 import type { ExcelWorkerResponse } from '../workers/excelParser';
+import { trackAnalysisError, trackFileUpload } from '../analytics';
 
 interface Props {
   mode: UploadMode;
@@ -41,6 +42,23 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [performanceWarning, setPerformanceWarning] = useState<string | null>(null);
+
+  const toAnalyticsMode = (value: UploadMode) => (value === 'flexible' ? 'flex' : 'ns_power');
+
+  const toFileType = (format: ReturnType<typeof detectFileFormat>): 'csv' | 'xlsx' | 'xml' => {
+    if (format === 'excel') return 'xlsx';
+    return format ?? 'csv';
+  };
+
+  const resolveUploadErrorCode = (message: string) => {
+    const lowered = message.toLowerCase();
+    if (lowered.includes('timed out')) return 'EXCEL_TIMEOUT';
+    if (lowered.includes('100,000') || lowered.includes('100000')) return 'TOO_MANY_ROWS';
+    if (lowered.includes('timestep') || lowered.includes('cadence')) return 'UNSUPPORTED_CADENCE';
+    if (lowered.includes('year of data') || lowered.includes('coverage')) return 'INSUFFICIENT_COVERAGE';
+    if (lowered.includes('invalid xml')) return 'INVALID_XML';
+    return 'PARSE_FAILURE';
+  };
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
@@ -125,12 +143,25 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
       try {
         const format = detectFileFormat(file.name, file.type ?? '');
         if (!format) {
-          throw new Error('Upload CSV, XLSX, or Green Button XML files.');
+          const message = 'Upload CSV, XLSX, or Green Button XML files.';
+          trackAnalysisError({ stage: 'upload', errorCode: 'UNSUPPORTED_EXTENSION' });
+          setError(message);
+          return;
         }
 
         if (mode === 'ns-power-smoc' && format !== 'excel') {
-          throw new Error('NS Power SMOC uploads must be Excel workbooks (.xlsx).');
+          const message = 'NS Power SMOC uploads must be Excel workbooks (.xlsx).';
+          trackAnalysisError({ stage: 'upload', errorCode: 'INVALID_MODE_FILETYPE' });
+          setError(message);
+          return;
         }
+
+        trackFileUpload({
+          fileType: toFileType(format),
+          isSample: false,
+          approxSizeKb: Math.round(file.size / 1024),
+          mode: toAnalyticsMode(mode)
+        });
 
         if (format === 'excel') {
           setStatusMessage(mode === 'ns-power-smoc' ? 'Parsing NS Power SMOC Excel data…' : 'Parsing Excel data…');
@@ -168,7 +199,9 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
           }
         }
       } catch (err) {
-        setError((err as Error).message || 'Unable to parse the file.');
+        const message = (err as Error).message || 'Unable to parse the file.';
+        setError(message);
+        trackAnalysisError({ stage: 'upload', errorCode: resolveUploadErrorCode(message) });
       } finally {
         setStatusMessage(null);
         setIsLoading(false);

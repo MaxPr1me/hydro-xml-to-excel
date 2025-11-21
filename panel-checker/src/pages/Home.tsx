@@ -5,6 +5,11 @@ import { AnalysisState, CsvPreview, IntervalDatum, UploadMode } from '../types';
 import type { MappingResult } from '../lib/parse';
 import { textEn } from '../content/text';
 import { convertToAmps } from '../lib/units';
+import {
+  trackAnalysisRun,
+  trackMappingCompleted,
+  trackModeSelected
+} from '../analytics';
 
 interface Props {
   onAnalysisReady: (analysis: AnalysisState) => void;
@@ -20,6 +25,18 @@ export default function Home({ onAnalysisReady }: Props) {
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>('flexible');
 
+  const toAnalyticsMode = (mode: UploadMode) => (mode === 'flexible' ? 'flex' : 'ns_power');
+
+  const trackMapping = (mappingResult: MappingResult, mode: UploadMode) => {
+    const durationMs = mappingResult.coverageEnd.getTime() - mappingResult.coverageStart.getTime();
+    const durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
+    trackMappingCompleted({
+      timestepMinutes: mappingResult.cadenceMinutes,
+      durationDays,
+      mode: toAnalyticsMode(mode)
+    });
+  };
+
   const handlePreview = (parsed: CsvPreview) => {
     setPreview(parsed);
     setResult(null);
@@ -27,12 +44,16 @@ export default function Home({ onAnalysisReady }: Props) {
 
   const handleMapping = (mappingResult: MappingResult) => {
     setResult(mappingResult);
+    trackMapping(mappingResult, uploadMode);
+    trackAnalysisRun({ mode: toAnalyticsMode(uploadMode), method: 'verified', hasData: true });
     onAnalysisReady({ source: 'file', data: mappingResult.data, mode: uploadMode });
   };
 
   const handleParsedData = (mappingResult: MappingResult) => {
     setPreview(null);
     setResult(mappingResult);
+    trackMapping(mappingResult, uploadMode);
+    trackAnalysisRun({ mode: toAnalyticsMode(uploadMode), method: 'verified', hasData: true });
     onAnalysisReady({ source: 'file', data: mappingResult.data, mode: uploadMode });
   };
 
@@ -46,6 +67,7 @@ export default function Home({ onAnalysisReady }: Props) {
     const amps = convertToAmps(parsed, 'kWh', manualVoltage, manualCadence);
     setPreview(null);
     setResult(null);
+    trackAnalysisRun({ mode: toAnalyticsMode(uploadMode), method: 'manual_peak', hasData: false });
     onAnalysisReady({
       source: 'manual',
       data: [],
@@ -57,6 +79,13 @@ export default function Home({ onAnalysisReady }: Props) {
         amps: Number(amps.toFixed(2))
       }
     });
+  };
+
+  const handleModeChange = (mode: UploadMode) => {
+    setUploadMode(mode);
+    setPreview(null);
+    setResult(null);
+    trackModeSelected(toAnalyticsMode(mode));
   };
 
   return (
@@ -76,16 +105,7 @@ export default function Home({ onAnalysisReady }: Props) {
         </div>
       </section>
 
-      <Uploader
-        mode={uploadMode}
-        onModeChange={(mode) => {
-          setUploadMode(mode);
-          setPreview(null);
-          setResult(null);
-        }}
-        onPreview={handlePreview}
-        onParsedData={handleParsedData}
-      />
+      <Uploader mode={uploadMode} onModeChange={handleModeChange} onPreview={handlePreview} onParsedData={handleParsedData} />
 
       {uploadMode === 'flexible' && preview && <Mapper preview={preview} onComplete={handleMapping} />}
 
