@@ -4,6 +4,7 @@ import { calculateVerdict, diversifiedLoad } from '../lib/calc';
 import { AnalysisState, IntervalDatum, LoadEntry, PanelInputs, PanelVerdict } from '../types';
 import InfoBubble from './InfoBubble';
 import { textEn } from '../content/text';
+import { trackAnalysisResult } from '../analytics';
 
 interface Props {
   analysis: AnalysisState;
@@ -58,6 +59,22 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
   useEffect(() => {
     onVerdictChange?.(verdict);
   }, [verdict, onVerdictChange]);
+
+  useEffect(() => {
+    const mode = analysis.mode === 'ns-power-smoc' ? 'ns_power' : 'flex';
+    const method = manualMode ? 'manual_peak' : 'verified';
+    const maxDemand = manualMode && analysis.manualPeak
+      ? analysis.manualPeak.amps
+      : analysis.data.reduce((max, datum) => Math.max(max, datum.amps), 0);
+    trackAnalysisResult({
+      mode,
+      method,
+      jurisdiction: analysis.mode === 'ns-power-smoc' ? 'NS' : undefined,
+      panelRatingAmps: inputs.mainBreaker,
+      maxDemandAmpsRounded: maxDemand ? Math.round(maxDemand / 5) * 5 : undefined,
+      upgradeRequired: verdict.status === 'Upgrade'
+    });
+  }, [analysis, inputs.mainBreaker, manualMode, verdict]);
 
   const addLoad = (list: 'existingLoads' | 'newLoads') => {
     setInputs((prev) => ({

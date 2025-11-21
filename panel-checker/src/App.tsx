@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Results from './pages/Results';
 import { AnalysisState } from './types';
 import { textEn } from './content/text';
+import { initAnalytics, trackToolLoaded } from './analytics';
 
 const tabs = [
   { id: 'upload', label: textEn.nav.upload, path: '/' },
@@ -14,6 +15,11 @@ export default function App() {
   const [analysis, setAnalysis] = useState<AnalysisState>({ source: 'none', data: [] });
   const navigate = useNavigate();
   const sparkLogoUrl = `${import.meta.env.BASE_URL}spark-logo.svg`;
+
+  useEffect(() => {
+    initAnalytics();
+    trackToolLoaded();
+  }, []);
 
   const handleAnalysisReady = useCallback(
     (payload: AnalysisState) => {

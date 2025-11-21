@@ -3,6 +3,7 @@ import { ColumnMapping, CsvPreview, IntervalUnit } from '../types';
 import { guessTimestampColumn, guessValueColumn, mapRecords, type MappingResult } from '../lib/parse';
 import InfoBubble from './InfoBubble';
 import { textEn } from '../content/text';
+import { trackAnalysisError } from '../analytics';
 
 interface Props {
   preview: CsvPreview;
@@ -42,7 +43,16 @@ export default function Mapper({ preview, onComplete }: Props) {
       const result = mapRecords(preview, mapping);
       onComplete(result);
     } catch (err) {
-      setError((err as Error).message);
+      const message = (err as Error).message;
+      setError(message);
+      const lowered = message.toLowerCase();
+      const errorCode =
+        lowered.includes('timestep') || lowered.includes('cadence')
+          ? 'UNSUPPORTED_CADENCE'
+          : lowered.includes('coverage') || lowered.includes('year')
+            ? 'INSUFFICIENT_COVERAGE'
+            : 'MAP_FAILURE';
+      trackAnalysisError({ stage: 'mapping', errorCode });
     }
   };
 
