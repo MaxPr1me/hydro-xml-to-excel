@@ -22,15 +22,23 @@ export function initAnalytics() {
   function gtag(...args: any[]) {
     window.dataLayer?.push(args);
   }
-  window.gtag = gtag;
+  if (!window.gtag) {
+    window.gtag = gtag;
+  }
 
-  const script = document.createElement('script');
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
-  document.head.appendChild(script);
+  const existingScript = document.querySelector(
+    `script[src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"]`
+  );
 
-  gtag('js', new Date());
-  gtag('config', GA_MEASUREMENT_ID, { send_page_view: true });
+  if (!existingScript) {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+    document.head.appendChild(script);
+  }
+
+  window.gtag('js', new Date());
+  window.gtag('config', GA_MEASUREMENT_ID, { send_page_view: true });
 
   initialized = true;
 }
