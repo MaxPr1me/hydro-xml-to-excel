@@ -1,28 +1,25 @@
 import { LoadEntry, PanelInputs, PanelVerdict } from '../types';
 
-function effectiveLoad(load: LoadEntry): number {
-  return load.continuous ? load.amps * 1.25 : load.amps;
-}
-
 export function diversifiedLoad(loads: LoadEntry[]): number {
-  return loads.reduce((sum, load) => sum + effectiveLoad(load), 0);
+  return loads.reduce((sum, load) => sum + load.amps, 0);
 }
 
 export function calculateVerdict(inputs: PanelInputs, demandAmps: number): PanelVerdict {
   const existing = diversifiedLoad(inputs.existingLoads);
+  const adjustedExisting = inputs.existingAdjustmentEnabled
+    ? existing * (inputs.existingAdjustmentPercent / 100)
+    : existing;
   const additions = diversifiedLoad(inputs.newLoads);
-  const diversified = Math.max(existing, demandAmps) + additions;
-  const available = inputs.mainBreaker - diversified;
+  const diversified = Math.max(adjustedExisting, demandAmps) + additions;
+  const effectiveBreaker = inputs.mainBreaker * (inputs.breakerLoadingEnabled ? inputs.breakerLoadingPercent / 100 : 1);
+  const available = effectiveBreaker - diversified;
 
   let status: PanelVerdict['status'] = 'OK';
-  let message = 'Demand appears to be within the service rating.';
+  let message = 'Demand appears to be within the main breaker allowance.';
 
   if (available < 0) {
     status = 'Upgrade';
-    message = 'Calculated load exceeds the main breaker rating; consider an upgrade.';
-  } else if (available < inputs.mainBreaker * 0.1) {
-    status = 'Review';
-    message = 'Available margin is slim; review with a licensed electrician.';
+    message = 'Calculated load exceeds the effective main breaker capacity; consider an upgrade.';
   }
 
   return {
@@ -42,9 +39,13 @@ export function defaultPanelInputs(): PanelInputs {
   return {
     serviceRating: 100,
     mainBreaker: 100,
+    breakerLoadingEnabled: true,
+    breakerLoadingPercent: 80,
     busRating: 225,
     voltage: 240,
     existingLoads: [],
-    newLoads: []
+    newLoads: [],
+    existingAdjustmentEnabled: false,
+    existingAdjustmentPercent: 125
   };
 }

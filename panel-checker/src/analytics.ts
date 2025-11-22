@@ -119,7 +119,7 @@ export function trackSummaryDownload(opts: {
 }
 
 export function trackAnalysisError(opts: {
-  stage: 'upload' | 'mapping' | 'analysis' | 'pdf';
+  stage: 'upload' | 'mapping' | 'analysis' | 'pdf' | 'report';
   errorCode: string;
 }) {
   trackEvent('analysis_error', opts);
