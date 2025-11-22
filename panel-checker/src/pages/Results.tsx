@@ -13,6 +13,7 @@ export default function Results({ analysis }: Props) {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const demandSectionRef = useRef<HTMLElement | null>(null);
   const reportSectionRef = useRef<HTMLElement | null>(null);
+  const reportCaptureRef = useRef<HTMLElement | null>(null);
 
   const hasIntervalData = analysis.source === 'file' && analysis.data.length > 0;
   const manualMode = analysis.source === 'manual' && !!analysis.manualPeak;
@@ -50,23 +51,24 @@ export default function Results({ analysis }: Props) {
           clear error.
         </div>
       )}
-      <PanelCalculator analysis={analysis} onVerdictChange={setVerdict} />
-      {manualMode && (
-        <div className="rounded-2xl border border-amber-500 bg-amber-50 p-4 text-sm text-amber-900">
-          Strong disclaimer: No interval data was uploaded. The peak amperage is derived from a user-entered kWh value and is
-          considered unverified. Use caution when sharing these results and attach documentation showing the original interval
-          reading.
-        </div>
-      )}
-      {verdict && (
-        <ReportCard
-          analysis={analysis}
-          verdict={verdict}
-          chartRef={chartRef}
-          demandSectionRef={demandSectionRef}
-          reportSectionRef={reportSectionRef}
-        />
-      )}
+      <section ref={reportCaptureRef} className="space-y-6">
+        <PanelCalculator analysis={analysis} onVerdictChange={setVerdict} />
+        {manualMode && (
+          <div className="rounded-2xl border border-amber-500 bg-amber-50 p-4 text-sm text-amber-900">
+            Strong disclaimer: No interval data was uploaded. The peak amperage is derived from a user-entered kWh value and is
+            considered unverified. Use caution when sharing these results and attach documentation showing the original interval
+            reading.
+          </div>
+        )}
+        {verdict && (
+          <ReportCard
+            analysis={analysis}
+            verdict={verdict}
+            reportSectionRef={reportSectionRef}
+            captureTargetRef={reportCaptureRef}
+          />
+        )}
+      </section>
     </main>
   );
 }

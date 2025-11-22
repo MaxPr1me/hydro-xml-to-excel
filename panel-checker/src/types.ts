@@ -56,16 +56,20 @@ export interface LoadEntry {
 export interface PanelInputs {
   serviceRating: number;
   mainBreaker: number;
+  breakerLoadingEnabled: boolean;
+  breakerLoadingPercent: number;
   busRating: number;
   voltage: 120 | 208 | 240;
   existingLoads: LoadEntry[];
   newLoads: LoadEntry[];
+  existingAdjustmentEnabled: boolean;
+  existingAdjustmentPercent: number;
 }
 
 export interface PanelVerdict {
   diversifiedLoad: number;
   availableMargin: number;
-  status: 'OK' | 'Review' | 'Upgrade';
+  status: 'OK' | 'Upgrade';
   message: string;
   proposedLoads: Array<Pick<LoadEntry, 'name' | 'amps' | 'continuous'>>;
 }

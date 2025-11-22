@@ -36,6 +36,6 @@ export const textEn = {
     mapper:
       'Pick the column that holds time or timestamp values and the column with your measurement (kWh, kW, or amps). Knowing which column is time and which is the reading lets us build the demand profile automatically.',
     panel:
-      'This calculator shows your service and main breaker sizes and lets you test extra loads like heat pumps, EV chargers, or ranges. Use the nameplate data for amperage (Rated Current, Rated Load Amps/RLA, or Input Current) to see if the panel can handle new equipment without an upgrade.'
+      'This calculator shows your service and main breaker sizes and lets you test extra loads like heat pumps, EV chargers, or ranges. Use the nameplate data for amperage (Rated Current, Rated Load Amps/RLA, or Input Current). For heat pumps, enter the Minimum Circuit Ampacity (MCA) from the nameplate to see if the panel can handle new equipment without an upgrade.'
   }
 } as const;

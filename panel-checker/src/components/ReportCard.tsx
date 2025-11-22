@@ -1,98 +1,43 @@
 import { type MutableRefObject } from 'react';
 import { AnalysisState, PanelVerdict } from '../types';
 import { computeDemandStats } from '../lib/parse';
-import { buildSummaryPdf } from '../lib/pdf';
-import { renderDemandProfileSnapshot, renderElementSnapshot, snapshotToBytes } from '../lib/snapshots';
+import { renderElementSnapshot } from '../lib/snapshots';
 import { trackAnalysisError, trackSummaryDownload } from '../analytics';
 
 interface Props {
   analysis: AnalysisState;
   verdict: PanelVerdict;
-  chartRef?: MutableRefObject<HTMLDivElement | null>;
-  demandSectionRef?: MutableRefObject<HTMLElement | null>;
   reportSectionRef?: MutableRefObject<HTMLElement | null>;
+  captureTargetRef?: MutableRefObject<HTMLElement | null>;
 }
 
-export default function ReportCard({ analysis, verdict, chartRef, demandSectionRef, reportSectionRef }: Props) {
+export default function ReportCard({ analysis, verdict, reportSectionRef, captureTargetRef }: Props) {
   const data = analysis.data;
   const stats = computeDemandStats(data);
   const manualMode = analysis.source === 'manual' && !!analysis.manualPeak;
 
   const downloadReport = async () => {
+    const targetElement = captureTargetRef?.current ?? reportSectionRef?.current;
+    if (!targetElement) return;
+
     try {
-      let reportImage: { data: Uint8Array; width: number; height: number } | undefined;
-      if (reportSectionRef?.current) {
-        try {
-          const snapshot = await renderElementSnapshot({ element: reportSectionRef.current });
-          reportImage = { data: snapshotToBytes(snapshot), width: snapshot.width, height: snapshot.height };
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.warn('Unable to capture report section for PDF', error);
-        }
-      }
-
-      let demandImage: { data: Uint8Array; width: number; height: number } | undefined;
-      if (demandSectionRef?.current) {
-        try {
-          const snapshot = await renderElementSnapshot({ element: demandSectionRef.current });
-          demandImage = { data: snapshotToBytes(snapshot), width: snapshot.width, height: snapshot.height };
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.warn('Unable to capture demand section for PDF', error);
-        }
-      }
-
-      if (!demandImage && !manualMode && chartRef?.current) {
-        try {
-          const snapshot = await renderDemandProfileSnapshot({
-            chartElement: chartRef.current,
-            data,
-            metric: 'amps'
-          });
-          demandImage = { data: snapshotToBytes(snapshot), width: snapshot.width, height: snapshot.height };
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.warn('Unable to capture chart image for PDF export', error);
-        }
-      }
-
-      const pdfBlob = buildSummaryPdf({
-        documentTitle: 'LEEP SPARK Tool - Demonstrate Load Report',
-        sections: [
-          {
-            title: 'One-page report',
-            image: reportImage,
-            placeholder: 'Unable to capture the report preview. Please take a screenshot as backup.'
-          },
-          {
-            title: 'Demand profile',
-            image: demandImage,
-            placeholder: manualMode
-              ? 'No interval data provided – demand profile not available.'
-              : 'Chart capture unavailable. Take a screenshot of the demand profile as backup.'
-          }
-        ],
-        disclaimer: manualMode
-          ? 'Strong disclaimer: Manual peak entry only. Verify against utility-provided interval data before relying on this report.'
-          : 'Screening tool only — always confirm against the Canadian Electrical Code, NEC, and utility requirements.'
-      });
-
+      const snapshot = await renderElementSnapshot({ element: targetElement, backgroundColor: '#f8fafc' });
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(pdfBlob);
-      link.download = 'leep-spark-panel-report.pdf';
+      link.href = snapshot.dataUrl;
+      link.download = 'leep-spark-panel-report.png';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
       trackSummaryDownload({
-        format: 'pdf',
+        format: 'png',
         method: manualMode ? 'manual_peak' : 'verified',
         hasData: analysis.source === 'file' && analysis.data.length > 0
       });
     } catch (error) {
-      trackAnalysisError({ stage: 'pdf', errorCode: 'PDF_EXPORT_FAILED' });
+      trackAnalysisError({ stage: 'report', errorCode: 'REPORT_EXPORT_FAILED' });
       // eslint-disable-next-line no-console
-      console.error('Failed to generate PDF', error);
+      console.error('Failed to generate report image', error);
     }
   };
 
@@ -111,7 +56,7 @@ export default function ReportCard({ analysis, verdict, chartRef, demandSectionR
           className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
           data-export-exclude="true"
         >
-          Download summary
+          Download Report
         </button>
       </div>
 
@@ -140,7 +85,7 @@ export default function ReportCard({ analysis, verdict, chartRef, demandSectionR
               <li key={`${load.name}-${index}`} className="flex items-center justify-between">
                 <span>{load.name?.trim() || 'Load'}</span>
                 <span className="font-semibold text-slate-900">
-                  {load.amps.toFixed(1)} A{load.continuous ? ' (continuous)' : ''}
+                  {load.amps.toFixed(1)} A
                 </span>
               </li>
             ))}
