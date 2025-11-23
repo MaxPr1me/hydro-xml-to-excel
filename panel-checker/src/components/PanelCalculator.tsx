@@ -128,9 +128,13 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
         : totalExisting,
     [inputs.existingAdjustmentEnabled, inputs.existingAdjustmentPercent, totalExisting]
   );
+  const limitingBreaker = useMemo(
+    () => Math.min(inputs.mainBreaker, inputs.serviceRating),
+    [inputs.mainBreaker, inputs.serviceRating]
+  );
   const effectiveBreaker = useMemo(
-    () => inputs.mainBreaker * (inputs.breakerLoadingEnabled ? inputs.breakerLoadingPercent / 100 : 1),
-    [inputs.breakerLoadingEnabled, inputs.breakerLoadingPercent, inputs.mainBreaker]
+    () => limitingBreaker * (inputs.breakerLoadingEnabled ? inputs.breakerLoadingPercent / 100 : 1),
+    [inputs.breakerLoadingEnabled, inputs.breakerLoadingPercent, limitingBreaker]
   );
 
   const verdictBadge =
@@ -273,7 +277,7 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
         <p className="text-2xl font-bold text-slate-900">{verdict.availableMargin.toFixed(1)} A</p>
         <p>{verdict.message} Always confirm with local code (CEC/NEC) and utility rules.</p>
         <p className="mt-2 text-slate-600">
-          Effective main breaker capacity: {effectiveBreaker.toFixed(1)} A at{' '}
+          Effective main breaker capacity: {effectiveBreaker.toFixed(1)} A (capped by {limitingBreaker} A service/breaker) at{' '}
           {inputs.breakerLoadingEnabled ? `${inputs.breakerLoadingPercent}%` : '100%'} loading.
         </p>
         <p className="text-slate-600">
