@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type MutableRefObject, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 import { calculateVerdict, diversifiedLoad } from '../lib/calc';
 import { AnalysisState, IntervalDatum, LoadEntry, PanelInputs, PanelVerdict } from '../types';
@@ -9,11 +9,12 @@ import { trackAnalysisResult } from '../analytics';
 interface Props {
   analysis: AnalysisState;
   onVerdictChange?: (verdict: PanelVerdict) => void;
+  sectionRef?: MutableRefObject<HTMLElement | null>;
 }
 
 const serviceSizes = [60, 70, 80, 100, 125, 150, 200];
 
-export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
+export default function PanelCalculator({ analysis, onVerdictChange, sectionRef }: Props) {
   const [inputs, setInputs] = useState<PanelInputs>({
     serviceRating: 100,
     mainBreaker: 100,
@@ -127,16 +128,20 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
         : totalExisting,
     [inputs.existingAdjustmentEnabled, inputs.existingAdjustmentPercent, totalExisting]
   );
+  const limitingBreaker = useMemo(
+    () => Math.min(inputs.mainBreaker, inputs.serviceRating),
+    [inputs.mainBreaker, inputs.serviceRating]
+  );
   const effectiveBreaker = useMemo(
-    () => inputs.mainBreaker * (inputs.breakerLoadingEnabled ? inputs.breakerLoadingPercent / 100 : 1),
-    [inputs.breakerLoadingEnabled, inputs.breakerLoadingPercent, inputs.mainBreaker]
+    () => limitingBreaker * (inputs.breakerLoadingEnabled ? inputs.breakerLoadingPercent / 100 : 1),
+    [inputs.breakerLoadingEnabled, inputs.breakerLoadingPercent, limitingBreaker]
   );
 
   const verdictBadge =
     verdict.status === 'OK' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
 
   return (
-    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+    <section ref={sectionRef} className="space-y-4 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Panel calculator</h2>
@@ -216,9 +221,8 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
 
       <div className="grid gap-6 md:grid-cols-2">
         <LoadList
-          title="Existing diversified load"
+          title="Existing load"
           items={inputs.existingLoads}
-          onAdd={() => addLoad('existingLoads')}
           onChange={(id, value) => updateLoad('existingLoads', id, value)}
           onRemove={(id) => removeLoad('existingLoads', id)}
           total={totalExisting}
@@ -259,7 +263,7 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
         />
 
         <LoadList
-          title="What-if appliances"
+          title="Proposed loads"
           items={inputs.newLoads}
           onAdd={() => addLoad('newLoads')}
           onChange={(id, value) => updateLoad('newLoads', id, value)}
@@ -273,12 +277,12 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
         <p className="text-2xl font-bold text-slate-900">{verdict.availableMargin.toFixed(1)} A</p>
         <p>{verdict.message} Always confirm with local code (CEC/NEC) and utility rules.</p>
         <p className="mt-2 text-slate-600">
-          Effective main breaker capacity: {effectiveBreaker.toFixed(1)} A at{' '}
+          Effective main breaker capacity: {effectiveBreaker.toFixed(1)} A (capped by {limitingBreaker} A service/breaker) at{' '}
           {inputs.breakerLoadingEnabled ? `${inputs.breakerLoadingPercent}%` : '100%'} loading.
         </p>
         <p className="text-slate-600">
-          Existing diversified load {inputs.existingAdjustmentEnabled ? 'after adjustment' : 'entered'}:{' '}
-          {adjustedExisting.toFixed(1)} A · Proposed additions: {totalNew.toFixed(1)} A.
+          Existing load {inputs.existingAdjustmentEnabled ? 'after adjustment' : 'entered'}: {adjustedExisting.toFixed(1)} A ·
+          Proposed additions: {totalNew.toFixed(1)} A.
         </p>
       </div>
     </section>
@@ -288,7 +292,7 @@ export default function PanelCalculator({ analysis, onVerdictChange }: Props) {
 interface ListProps {
   title: string;
   items: LoadEntry[];
-  onAdd: () => void;
+  onAdd?: () => void;
   onRemove: (id: string) => void;
   onChange: (id: string, value: Partial<LoadEntry>) => void;
   total: number;
@@ -305,13 +309,15 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst, h
           <p className="text-sm font-semibold text-slate-700">{title}</p>
           {headerExtras}
         </div>
-        <button
-          type="button"
-          className="rounded-full border border-brand-600 px-3 py-1 text-xs font-semibold text-brand-700"
-          onClick={onAdd}
-        >
-          Add load
-        </button>
+        {onAdd && (
+          <button
+            type="button"
+            className="rounded-full border border-brand-600 px-3 py-1 text-xs font-semibold text-brand-700"
+            onClick={onAdd}
+          >
+            Add load
+          </button>
+        )}
       </div>
 
       <div className="space-y-2">

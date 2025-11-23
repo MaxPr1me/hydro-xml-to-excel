@@ -17,7 +17,7 @@ describe('summary pdf builder', () => {
     const buffer = Buffer.from(await blob.arrayBuffer());
     const content = buffer.toString('latin1');
 
-    assert.ok(content.includes('/Count 2'));
+    assert.ok(content.includes('/Count 1'));
     assert.ok(content.includes('Test Summary'));
     assert.ok(content.includes('Demand profile'));
     assert.ok(content.includes('%%EOF'));

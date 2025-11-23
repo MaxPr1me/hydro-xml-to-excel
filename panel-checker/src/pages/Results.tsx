@@ -13,7 +13,7 @@ export default function Results({ analysis }: Props) {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const demandSectionRef = useRef<HTMLElement | null>(null);
   const reportSectionRef = useRef<HTMLElement | null>(null);
-  const reportCaptureRef = useRef<HTMLElement | null>(null);
+  const panelSectionRef = useRef<HTMLElement | null>(null);
 
   const hasIntervalData = analysis.source === 'file' && analysis.data.length > 0;
   const manualMode = analysis.source === 'manual' && !!analysis.manualPeak;
@@ -51,8 +51,8 @@ export default function Results({ analysis }: Props) {
           clear error.
         </div>
       )}
-      <section ref={reportCaptureRef} className="space-y-6">
-        <PanelCalculator analysis={analysis} onVerdictChange={setVerdict} />
+      <section className="space-y-6">
+        <PanelCalculator analysis={analysis} onVerdictChange={setVerdict} sectionRef={panelSectionRef} />
         {manualMode && (
           <div className="rounded-2xl border border-amber-500 bg-amber-50 p-4 text-sm text-amber-900">
             Strong disclaimer: No interval data was uploaded. The peak amperage is derived from a user-entered kWh value and is
@@ -65,7 +65,9 @@ export default function Results({ analysis }: Props) {
             analysis={analysis}
             verdict={verdict}
             reportSectionRef={reportSectionRef}
-            captureTargetRef={reportCaptureRef}
+            demandSectionRef={demandSectionRef}
+            panelSectionRef={panelSectionRef}
+            chartRef={chartRef}
           />
         )}
       </section>
