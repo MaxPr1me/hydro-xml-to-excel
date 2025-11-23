@@ -1,4 +1,27 @@
-const DEFAULT_REPO_URL = 'https://github.com/MaxPr1me/hydro-xml-to-excel';
+import packageJson from '../../package.json';
+
+type PackageRepo = string | { type?: string; url?: string };
+
+function normalizeRepoUrl(repoUrl?: string) {
+  if (!repoUrl) {
+    return undefined;
+  }
+
+  return repoUrl.replace(/^git\+/, '').replace(/\.git$/, '').replace(/\/$/, '');
+}
+
+function resolveRepoUrlFromPackage(repo: PackageRepo | undefined) {
+  if (!repo) {
+    return undefined;
+  }
+
+  const rawUrl = typeof repo === 'string' ? repo : repo.url;
+  return normalizeRepoUrl(rawUrl);
+}
+
+const PACKAGE_REPO_URL = resolveRepoUrlFromPackage(packageJson.repository);
+const DEFAULT_REPO_URL =
+  PACKAGE_REPO_URL && !PACKAGE_REPO_URL.includes('OWNER/REPO') ? PACKAGE_REPO_URL : undefined;
 
 function inferRepoUrlFromHost() {
   const { hostname, pathname } = window.location;
@@ -17,12 +40,12 @@ function inferRepoUrlFromHost() {
 }
 
 export function resolveRepoUrl() {
-  const envRepoUrl = import.meta.env.VITE_REPO_URL?.trim();
+  const envRepoUrl = normalizeRepoUrl(import.meta.env.VITE_REPO_URL?.trim());
   if (envRepoUrl) {
-    return envRepoUrl.replace(/\/$/, '');
+    return envRepoUrl;
   }
 
-  const inferredUrl = inferRepoUrlFromHost();
+  const inferredUrl = normalizeRepoUrl(inferRepoUrlFromHost());
   if (inferredUrl) {
     return inferredUrl;
   }
@@ -32,5 +55,7 @@ export function resolveRepoUrl() {
 
 export function buildLicenseUrl() {
   const branch = import.meta.env.VITE_DEFAULT_BRANCH?.trim() || 'main';
-  return `${resolveRepoUrl()}/blob/${branch}/LICENSE`;
+  const repoUrl = resolveRepoUrl();
+
+  return repoUrl ? `${repoUrl}/blob/${branch}/LICENSE` : '#';
 }
