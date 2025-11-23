@@ -11,13 +11,21 @@ export function calculateVerdict(inputs: PanelInputs, demandAmps: number): Panel
     : existing;
   const additions = diversifiedLoad(inputs.newLoads);
   const diversified = Math.max(adjustedExisting, demandAmps) + additions;
-  const effectiveBreaker = inputs.mainBreaker * (inputs.breakerLoadingEnabled ? inputs.breakerLoadingPercent / 100 : 1);
+  const limitingBreaker = Math.min(inputs.mainBreaker, inputs.serviceRating);
+  const effectiveBreaker = limitingBreaker * (inputs.breakerLoadingEnabled ? inputs.breakerLoadingPercent / 100 : 1);
   const available = effectiveBreaker - diversified;
 
   let status: PanelVerdict['status'] = 'OK';
   let message = 'Demand appears to be within the main breaker allowance.';
 
-  if (available < 0) {
+  const serviceUpgradeNeeded = inputs.mainBreaker > inputs.serviceRating;
+
+  if (serviceUpgradeNeeded) {
+    status = 'Upgrade';
+    message = 'Service size increase required to match the main breaker rating.';
+  }
+
+  if (available < 0 && !serviceUpgradeNeeded) {
     status = 'Upgrade';
     message = 'Calculated load exceeds the effective main breaker capacity; consider an upgrade.';
   }
