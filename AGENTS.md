@@ -10,6 +10,15 @@ Scope: entire repository.
 - Prefer TypeScript sources; do not commit build outputs (`dist/`, `tsconfig*.tsbuildinfo`).
 - Keep URLs, workflow triggers, and metadata fork-friendly: prefer relative links, resolve branches via the repo default, and avoid
   hard-coding org/user names or site hosts.
+- All future UI work must align with WET-BOEW and the Canada.ca Content Style Guide:
+  - https://github.com/wet-boew/wet-boew
+  - https://design.canada.ca/style-guide/
+- UI do/don't rules for contributors:
+  - Do use GCWeb/WET patterns and semantic landmarks (header, main, footer, skip links).
+  - Do keep forms accessible: explicit labels, hint text, keyboard support, focus management, and error summaries that link to fields.
+  - Do keep headings task-based and plain-language per Canada.ca style guidance.
+  - Don't introduce UI frameworks or CSS resets that conflict with WET/GCWeb behaviour.
+  - Don't change parsing/calculation/export logic without explicit approval in the task scope.
 
 ## Self-update policy
 
@@ -25,6 +34,7 @@ changed and why. This keeps future agents oriented.
 - 2025-11-20 – Vite base switched to `./`, BrowserRouter basename now resolves at runtime, and docs updated so forks deploy to GitHub Pages without manual path edits.
 - 2025-11-21 – GitHub Pages workflow now targets the repo's default branch and app metadata uses relative URLs for forks.
 - 2025-11-22 – Added fork-friendly coding policy to keep branches, URLs, and org names dynamic.
+- 2026-02-11 – Refreshed SPA UI shell to GCWeb/WET patterns, added EN/FR route toggle wiring, and documented Canada.ca content/accessibility rules to keep future UI updates compliant.
 
 ## Tasks
 

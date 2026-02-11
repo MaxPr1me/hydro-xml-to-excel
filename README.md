@@ -15,7 +15,7 @@
 
 SPARK is a data-driven analysis tool developed by CanmetENERGY-Ottawa to support electrification retrofits in Canadian homes. Using historical interval meter data, SPARK calculates peak amperage and demonstrated demand so contractors can determine whether a main electrical panel actually requires an upgrade. By relying on real kWh consumption data rather than conservative assumptions, SPARK helps homeowners, utilities, and programs avoid unnecessary panel upgrades.
 
-SPARK keeps the same mission as the original Hydro XML to Excel utility viewer: upload CSV, XLSX, or Green Button XML interval data, map its columns, visualize the demand profile, and review a plain-language verdict that summarizes continuous vs. non-continuous loads. The React + Vite experience now reflects the updated branding while preserving every parser, mapper, and chart workflow that teams rely on.
+SPARK keeps the same mission as the original Hydro XML to Excel utility viewer: upload CSV, XLSX, or Green Button XML interval data, map its columns, visualize the demand profile, and review a plain-language verdict that summarizes continuous vs. non-continuous loads. The React + Vite experience now uses GCWeb/WET page structure and Canada.ca plain-language content patterns while preserving every parser, mapper, and chart workflow that teams rely on.
 
 _A bilingual UI will be added later._
 
@@ -29,7 +29,7 @@ _A bilingual UI will be added later._
 - 🧮 Plain-language panel calculator that anchors to the absolute one-year max (×1.25), differentiates continuous vs. non-continuous loads, and lets you stack what-if scenarios.
 - 🧾 Manual entry path that converts a user-supplied peak kWh reading into amps so crews can run the calculator even when no file is available; the UI clearly flags these runs as unverified and disables the graph.
 - 📄 Download-ready PDF summary that embeds the demand profile chart (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout.
-- 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
+- 🌐 Header language toggle (EN/FR route + state wiring). French routes are enabled now and can receive translated strings later.
 - 🔀 Mode toggle for generic Flexible interval data vs. NS Power SMOC XLSX exports; the SMOC path reads "Interval Period End Timestamp Local" and uses the higher of Max A(a)/Max A(c) per interval.
 
 ## Uploading interval data
@@ -43,10 +43,17 @@ _A bilingual UI will be added later._
 - **Flexible interval data** accepts CSV, XLSX, and Green Button XML. Timestamp headers are detected by name, and cadence is inferred from the first several dozen valid rows.
 - **NS Power SMOC data** expects the Interval Period End Timestamp Local column and Max A(a)/Max A(c) fields on the first worksheet of an XLSX export. Amperage is derived from the highest phase per interval; malformed timestamps or missing Max A columns raise immediate errors.
 
+
+## UI standards
+
+- Page chrome, skip links, landmarks, forms, and validation messaging align with WET-BOEW + GCWeb patterns.
+- Content follows the [Canada.ca Content Style Guide](https://design.canada.ca/style-guide/): task-based headings, short instructions, and plain language.
+- EN/FR toggle changes route and persisted locale state; current strings remain English until translation is completed.
+
 ## Tech stack
 
 - [Vite](https://vitejs.dev/) + [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- [Tailwind CSS](https://tailwindcss.com/) utility styling
+- [WET-BOEW GCWeb](https://github.com/wet-boew/wet-boew) theme assets for Canada.ca page chrome and behaviour
 - [Papa Parse](https://www.papaparse.com/) for CSV ingestion
 - [Zod](https://github.com/colinhacks/zod) runtime validation
 - [Plotly](https://plotly.com/javascript/) charts

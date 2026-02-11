@@ -1,110 +1,128 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Home from './pages/Home';
 import Results from './pages/Results';
 import { AnalysisState } from './types';
-import { textEn } from './content/text';
+import { Locale, textByLocale } from './content/text';
 import { initAnalytics, trackToolLoaded } from './analytics';
 import { buildLicenseUrl } from './utils/repoLinks';
+import { useWetEnhance } from './hooks/useWetEnhance';
 
 const tabs = [
-  { id: 'upload', label: textEn.nav.upload, path: '/' },
-  { id: 'results', label: textEn.nav.results, path: '/results' }
+  { id: 'upload', label: 'upload' as const, path: '' },
+  { id: 'results', label: 'results' as const, path: 'results' }
 ] as const;
 
-export default function App() {
+function LocaleLayout() {
+  const { lang } = useParams<{ lang: Locale }>();
+  const locale: Locale = lang === 'fr' ? 'fr' : 'en';
+  const text = textByLocale[locale];
   const [analysis, setAnalysis] = useState<AnalysisState>({ source: 'none', data: [] });
   const navigate = useNavigate();
+  const location = useLocation();
   const sparkLogoUrl = `${import.meta.env.BASE_URL}spark-logo.svg`;
+
+  const handleAnalysisReady = useCallback(
+    (payload: AnalysisState) => {
+      setAnalysis(payload);
+      navigate(`/${locale}/results`);
+    },
+    [locale, navigate]
+  );
+
+  useEffect(() => {
+    localStorage.setItem('spark.locale', locale);
+  }, [locale]);
+
+  useEffect(() => {
+    const pageName = location.pathname.endsWith('/results') ? text.nav.results : text.nav.upload;
+    document.title = `${text.toolName} – ${pageName}`;
+  }, [location.pathname, text.nav.results, text.nav.upload, text.toolName]);
+
+  useWetEnhance([location.pathname, locale]);
+
+  const breadcrumbLabel = useMemo(
+    () => (location.pathname.endsWith('/results') ? text.nav.results : text.nav.upload),
+    [location.pathname, text.nav.results, text.nav.upload]
+  );
+
+  return (
+    <div className="wb-init">
+      <header>
+        <div id="wb-bnr" className="container">
+          <div className="brand">
+            <p className="h4 mrgn-tp-sm mrgn-bttm-0">Natural Resources Canada</p>
+            <p className="mrgn-tp-0">CanmetENERGY-Ottawa</p>
+          </div>
+          <nav aria-label={text.language.switchLabel} className="text-right">
+            <ul className="list-inline mrgn-tp-md mrgn-bttm-0">
+              <li>
+                <NavLink to="/en" className={locale === 'en' ? 'font-weight-bold' : ''}>English</NavLink>
+              </li>
+              <li>
+                <NavLink to="/fr" className={locale === 'fr' ? 'font-weight-bold' : ''}>Français</NavLink>
+              </li>
+            </ul>
+          </nav>
+        </div>
+        <div className="gcweb-menu" data-trgt="mb-pnl" />
+        <div className="container">
+          <h1 property="name" className="mrgn-tp-lg">{text.toolName}</h1>
+          <p>{text.whatThisToolDoes}</p>
+        </div>
+        <nav aria-label="Breadcrumb" className="container">
+          <ol className="breadcrumb">
+            <li><NavLink to={`/${locale}`}>{text.nav.upload}</NavLink></li>
+            <li aria-current="page">{breadcrumbLabel}</li>
+          </ol>
+        </nav>
+        <nav className="container" aria-label="Primary">
+          <ul className="list-inline">
+            {tabs.map((tab) => (
+              <li key={tab.id} className="mrgn-rght-md">
+                <NavLink to={`/${locale}/${tab.path}`} end={!tab.path}>{text.nav[tab.label]}</NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </header>
+
+      <Routes>
+        <Route path="/" element={<Home onAnalysisReady={handleAnalysisReady} locale={locale} />} />
+        <Route path="/results" element={<Results analysis={analysis} locale={locale} />} />
+      </Routes>
+
+      <footer id="wb-info">
+        <div className="container">
+          <h2 className="wb-inv">About this site</h2>
+          <p>{text.footer.license} <a href={buildLicenseUrl()}>Read the license</a>.</p>
+          <p>Contact: <a href="mailto:leep@nrcan-rncan.gc.ca">leep@nrcan-rncan.gc.ca</a></p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export default function App() {
+  const navigate = useNavigate();
 
   useEffect(() => {
     initAnalytics();
     trackToolLoaded();
   }, []);
 
-  const handleAnalysisReady = useCallback(
-    (payload: AnalysisState) => {
-      setAnalysis(payload);
-      navigate('/results');
-    },
-    [navigate]
-  );
+  useEffect(() => {
+    if (window.location.pathname === '/' || window.location.pathname === '') {
+      const storedLocale = localStorage.getItem('spark.locale');
+      const locale = storedLocale === 'fr' ? 'fr' : 'en';
+      navigate(`/${locale}`, { replace: true });
+    }
+  }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-brand-50 text-[#0F2941]">
-      <header className="bg-white text-[#0F2941] shadow-lg">
-        <div className="h-1 bg-[#FFC933]" aria-hidden />
-        <div className="bg-[#0F2941] text-white">
-          <div className="mx-auto max-w-6xl px-4 py-2 text-sm font-semibold tracking-[0.4em] uppercase">
-            {textEn.organization}
-          </div>
-        </div>
-        <div className="mx-auto max-w-6xl space-y-8 px-4 py-10">
-          <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-center">
-            <div className="flex-1 space-y-4 text-center lg:text-left">
-              <p className="text-sm font-semibold uppercase tracking-[0.4em] text-[#0F2941]">
-                {textEn.toolName}
-              </p>
-              <h1 className="text-3xl font-black lg:text-4xl">{textEn.subtitle}</h1>
-              <p className="text-base text-[#0F2941] lg:max-w-2xl">{textEn.heroParagraph}</p>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#0F2941]/80">
-                {textEn.heroTagline}
-              </p>
-            </div>
-            <div className="flex flex-1 justify-center">
-              <img
-                src={sparkLogoUrl}
-                alt="SPARK load profile logo"
-                className="w-full max-w-md"
-              />
-            </div>
-          </div>
-
-          <nav className="flex flex-wrap gap-3">
-            {tabs.map((tab) => (
-              <NavLink
-                key={tab.id}
-                to={tab.path}
-                end={tab.path === '/'}
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    isActive ? 'bg-[#0F2941] text-white shadow' : 'bg-[#0F2941]/5 text-[#0F2941] hover:bg-[#0F2941]/10'
-                  }`
-                }
-              >
-                {tab.label}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-      </header>
-
-      <Routes>
-        <Route path="/" element={<Home onAnalysisReady={handleAnalysisReady} />} />
-        <Route path="/results" element={<Results analysis={analysis} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-
-      <footer className="bg-[#0F2941] text-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-xs">
-          <p>{textEn.footer.pwa}</p>
-          <p>{textEn.footer.bilingual}</p>
-          <p>
-            <a
-              href={buildLicenseUrl()}
-              className="font-semibold underline"
-            >
-              {textEn.footer.license}
-            </a>
-          </p>
-          <p>
-            Contact us:{' '}
-            <a href="mailto:leep@nrcan-rncan.gc.ca" className="font-semibold underline">
-              leep@nrcan-rncan.gc.ca
-            </a>
-          </p>
-        </div>
-      </footer>
-    </div>
+    <Routes>
+      <Route path="/:lang(en|fr)/*" element={<LocaleLayout />} />
+      <Route path="*" element={<Navigate to="/en" replace />} />
+    </Routes>
   );
 }
