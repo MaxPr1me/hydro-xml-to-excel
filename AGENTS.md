@@ -35,6 +35,7 @@ changed and why. This keeps future agents oriented.
 - 2025-11-21 – GitHub Pages workflow now targets the repo's default branch and app metadata uses relative URLs for forks.
 - 2025-11-22 – Added fork-friendly coding policy to keep branches, URLs, and org names dynamic.
 - 2026-02-11 – Refreshed SPA UI shell to GCWeb/WET patterns, added EN/FR route toggle wiring, and documented Canada.ca content/accessibility rules to keep future UI updates compliant.
+- 2026-02-11 – Added a GitHub Pages `404.html` SPA fallback + index deep-link restoration so `/en` and `/fr` routes resolve to `index.html` on forks without hard-coded repo paths.
 
 ## Tasks
 

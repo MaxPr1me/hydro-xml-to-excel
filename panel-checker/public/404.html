@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecting…</title>
+    <script>
+      (() => {
+        const { hostname, origin, pathname, search, hash } = window.location;
+        const pathSegments = pathname.split('/').filter(Boolean);
+        const isGithubPagesProject = /github\.io$/i.test(hostname) && pathSegments.length > 0;
+        const baseSegmentCount = isGithubPagesProject ? 1 : 0;
+        const basePath = pathSegments.slice(0, baseSegmentCount).join('/');
+        const routePath = `/${pathSegments.slice(baseSegmentCount).join('/')}`;
+        const queryAndHash = `${routePath}${search}${hash}`;
+        const destination = `${origin}/${basePath ? `${basePath}/` : ''}?__gh_path__=${encodeURIComponent(queryAndHash)}`;
+
+        window.location.replace(destination);
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting…</p>
+  </body>
+</html>

@@ -20,6 +20,24 @@
       gtag('js', new Date());
       gtag('config', 'G-H7D2LYV208');
     </script>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const redirectedPath = params.get('__gh_path__');
+
+        if (!redirectedPath) {
+          return;
+        }
+
+        params.delete('__gh_path__');
+        const basePath = window.location.pathname.replace(/\/$/, '');
+        const normalizedPath = redirectedPath.startsWith('/') ? redirectedPath : `/${redirectedPath}`;
+        const query = params.toString();
+        const nextUrl = `${basePath}${normalizedPath}${query ? `?${query}` : ''}`;
+
+        window.history.replaceState(null, '', nextUrl);
+      })();
+    </script>
     <title>SPARK panel assessment tool</title>
   </head>
   <body vocab="http://schema.org/" typeof="WebPage">
@@ -30,6 +48,6 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@2.2.4/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/wet-boew@4.0.88/dist/wet-boew/js/wet-boew.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/wet-boew@4.0.88/dist/theme-gcweb/js/theme.min.js"></script>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="src/main.tsx"></script>
   </body>
 </html>

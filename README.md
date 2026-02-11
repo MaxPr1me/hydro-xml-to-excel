@@ -80,11 +80,12 @@ order; check off each step before moving on.
    `node -v` works.
 4. **Install dependencies.** Run `cd panel-checker && npm install`. This grabs React, Vite, Plotly, etc.
 5. **Create a production build.** Still inside `panel-checker`, run `npm run build`. The command performs a strict type-check and
-   outputs the static site under `panel-checker/dist`. Vite now uses a relative `base: './'` and the router derives its `basename`
-   from the browser URL, so the generated `index.html`, manifests, and runtime navigation adapt to whatever `/repo-name/` path
-   GitHub Pages assigns—no manual edits are needed when you fork or rename the project.
-6. **Verify the build folder.** Run `ls dist` (while still inside `panel-checker`). You should see `index.html`, `assets/`, and a
-   `manifest.webmanifest`. If the folder is missing, rerun step 5 and fix any red error text.
+   outputs the static site under `panel-checker/dist`. Vite now uses a relative `base: './'`, the router derives its `basename`
+   from the browser URL, and `public/404.html` rewrites deep links back to `index.html` at runtime. Together this keeps EN/FR
+   routes working on GitHub Pages project sites (`/<repo-name>/en`, `/<repo-name>/fr`) without hard-coded repo names when you fork
+   or rename the project.
+6. **Verify the build folder.** Run `ls dist` (while still inside `panel-checker`). You should see `index.html`, `404.html`,
+   `assets/`, and a `manifest.webmanifest`. If the folder is missing, rerun step 5 and fix any red error text.
 7. **Commit your work.** From the repo root, run `git add panel-checker && git commit -m "Build panel-checker"` and push it with
    `git push` so GitHub has the latest code. You do **not** need to commit the `dist/` folder because the workflow below rebuilds
    it for you.
