@@ -13,6 +13,7 @@ import {
 } from '../lib/parse';
 import type { ExcelWorkerResponse } from '../workers/excelParser';
 import { trackAnalysisError, trackFileUpload } from '../analytics';
+import ErrorSummary from './ErrorSummary';
 
 interface Props {
   mode: UploadMode;
@@ -233,62 +234,40 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {modes.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onModeChange(option.id)}
-            className={`flex-1 min-w-[180px] rounded-2xl border px-4 py-3 text-left shadow-sm transition ${
-              mode === option.id
-                ? 'border-brand-600 bg-brand-50 text-brand-900'
-                : 'border-slate-200 bg-white text-slate-800 hover:border-brand-300'
-            }`}
-          >
-            <p className="text-sm font-semibold">{option.title}</p>
-            <p className="text-xs text-slate-600">{option.description}</p>
+    <section className="panel panel-default" aria-labelledby="upload-heading">
+      <header className="panel-heading">
+        <h2 id="upload-heading" className="panel-title">Upload data</h2>
+      </header>
+      <div className="panel-body">
+        <fieldset>
+          <legend className="h5">Choose data mode</legend>
+          <div className="row">
+            {modes.map((option) => (
+              <div key={option.id} className="col-md-6">
+                <label className="radio">
+                  <input type="radio" name="upload-mode" checked={mode === option.id} onChange={() => onModeChange(option.id)} />
+                  <strong>{option.title}</strong>
+                  <span className="display-block">{option.description}</span>
+                </label>
+              </div>
+            ))}
+          </div>
+        </fieldset>
+
+        <label htmlFor="file" className="display-block well text-center" onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
+          <ArrowUpTrayIcon className="center-block" style={{ width: 40, height: 40 }} aria-hidden />
+          <p className="h5">Drag and drop interval data</p>
+          <p>{mode === 'ns-power-smoc' ? 'NS Power SMOC XLSX files (first worksheet).' : 'CSV, XLSX, or Green Button XML files are accepted.'}</p>
+          <button type="button" className="btn btn-primary" onClick={() => inputRef.current?.click()} disabled={isLoading}>
+            {isLoading ? 'Parsing…' : 'Choose file'}
           </button>
-        ))}
-      </div>
+          <input id="file" ref={inputRef} type="file" accept=".csv,.xls,.xlsx,.xml,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/xml" className="wb-inv" onChange={onChange} />
+        </label>
 
-      <label
-        htmlFor="file"
-        className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-brand-500 bg-white/80 px-6 py-12 text-center text-brand-900 shadow-sm hover:bg-brand-50"
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={onDrop}
-      >
-        <ArrowUpTrayIcon className="h-10 w-10 text-brand-500" />
-        <div>
-          <p className="text-lg font-semibold">Drag and drop interval data</p>
-          <p className="text-sm text-slate-500">{mode === 'ns-power-smoc' ? 'NS Power SMOC XLSX files (first worksheet).' : 'CSV, XLSX, or Green Button XML files are all accepted.'}</p>
-        </div>
-        <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-800">
-          Mode: {mode === 'ns-power-smoc' ? 'NS Power SMOC data' : 'Flexible interval data'}
-        </span>
-        <button
-          type="button"
-          className="rounded-full bg-accent-400 px-5 py-2 text-sm font-semibold text-brand-900 shadow"
-          onClick={() => inputRef.current?.click()}
-          disabled={isLoading}
-        >
-          {isLoading ? 'Parsing…' : 'Browse files'}
-        </button>
-        <input
-          id="file"
-          ref={inputRef}
-          type="file"
-          accept=".csv,.xls,.xlsx,.xml,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/xml"
-          className="sr-only"
-          onChange={onChange}
-        />
-      </label>
-
-      <div className="space-y-1">
-        {statusMessage && <p className="text-sm text-brand-700">{statusMessage}</p>}
-        {performanceWarning && <p className="text-sm text-amber-600">{performanceWarning}</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        <ErrorSummary errors={error ? [{ id: 'file', message: error }] : []} />
+        {statusMessage && <p aria-live="polite">{statusMessage}</p>}
+        {performanceWarning && <p className="text-warning">{performanceWarning}</p>}
       </div>
-    </div>
+    </section>
   );
 }

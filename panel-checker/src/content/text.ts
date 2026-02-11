@@ -1,41 +1,54 @@
-// TODO: Add French version later – SPARK (Système pour la pointe d’ampérage selon les relevés en kWh)
-export const textEn = {
-  organization: 'CanmetENERGY-Ottawa',
-  toolName: 'LEEP’s SPARK Tool',
+export type Locale = 'en' | 'fr';
+
+const shared = {
+  toolName: 'SPARK panel assessment tool',
   subtitle: 'System for Peak Amperage from Real kWh',
-  heroParagraph:
-    'SPARK is a data-driven analysis tool developed by CanmetENERGY-Ottawa to support electrification retrofits in Canadian homes. Using historical interval meter data, SPARK calculates peak amperage and demonstrated demand so contractors can determine whether a main electrical panel actually requires an upgrade. By relying on real kWh consumption data rather than conservative assumptions, SPARK helps homeowners, utilities, and programs avoid unnecessary panel upgrades.',
-  heroTagline: 'Real data. Real peaks. Smarter panel decisions.',
+  whatThisToolDoes:
+    'Use one year of interval data to estimate peak amperage and screen whether a panel upgrade is likely required.',
+  beforeYouStart: [
+    'Gather at least one year of interval data in CSV, XLSX, or Green Button XML format.',
+    'Confirm the data uses a consistent 15, 30, or 60 minute interval.',
+    'Have service and breaker ratings ready before using the panel check step.'
+  ],
   nav: {
-    upload: 'Upload & validate',
+    upload: 'Upload data',
     results: 'Results'
   },
+  progress: ['Upload data', 'Map columns', 'Results', 'Panel check', 'Download report'],
   home: {
-    calloutLabel: 'Interval data workflow',
-    calloutHeading: 'Keep electrification projects moving with real kWh data.',
-    calloutParagraph:
-      'Confirm whether an electrical panel has the headroom needed for electrification projects. Import CSV, XLSX, or Green Button XML data, align the columns, and unlock the demand chart plus calculator.',
-    bulletPoints: [
-      'Validate cadence and units before relying on the data.',
-      'Pick Flexible mode for generic interval data or NS Power SMOC mode to auto-read timestamps and Max A columns.',
-      'Plot a year of amps or kilowatt-hours to catch spikes and seasonal trends.',
-      'Summarize diversified loads plus proposed appliances in one report.'
-    ],
-    summaryPrefix: 'Data OK!',
-    summaryCoverageIntro: 'intervals covering',
-    summaryPeakIntro: 'One-year peak demand hit',
-    summaryPeakUnits: 'A.'
+    heading: 'Upload and prepare interval data',
+    intro:
+      'Choose a data mode, upload your file, and review validation messages before continuing to results.',
+    summaryPrefix: 'Data ready:',
+    summaryCoverageIntro: 'intervals from',
+    summaryPeakIntro: 'Peak demand:',
+    summaryPeakUnits: 'A',
+    manualHeading: 'Use a manual peak when no interval file is available',
+    manualDescription:
+      'This option keeps calculator behaviour the same, but marks results as user-supplied data and does not produce a demand chart.'
   },
-  footer: {
-    pwa: 'Installable PWA · Works offline after first load.',
-    bilingual: 'Bilingual UI coming soon.',
-    license:
-      "License: NRCan End-User License Agreement for LEEP's SPARK Tool (System for Peak Amperage from Real kWh)."
+  mapper: {
+    heading: 'Map your columns',
+    intro: 'Choose which columns contain timestamps and energy or demand values.'
   },
   help: {
-    mapper:
-      'Pick the column that holds time or timestamp values and the column with your measurement (kWh, kW, or amps). Knowing which column is time and which is the reading lets us build the demand profile automatically.',
     panel:
-      'This calculator shows your service and main breaker sizes and lets you test extra loads like heat pumps, EV chargers, or ranges. For heat pumps, enter the Minimum Circuit Ampacity (MCA) from the nameplate to see if the panel can handle new equipment without an upgrade.'
+      'This calculator shows service and breaker limits and lets you test new appliance loads without changing core SPARK calculations.'
+  },
+  footer: {
+    license:
+      "NRCan End-User License Agreement for LEEP's SPARK Tool (System for Peak Amperage from Real kWh)."
+  },
+  language: {
+    switchLabel: 'Language selection',
+    en: 'English',
+    fr: 'Français'
   }
 } as const;
+
+export const textByLocale: Record<Locale, typeof shared> = {
+  en: shared,
+  fr: shared
+};
+
+export const textEn = textByLocale.en;

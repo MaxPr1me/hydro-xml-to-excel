@@ -3,9 +3,11 @@ import { useRef, useState } from 'react';
 import PanelCalculator from '../components/PanelCalculator';
 import ReportCard from '../components/ReportCard';
 import { AnalysisState, PanelVerdict } from '../types';
+import { Locale } from '../content/text';
 
 interface Props {
   analysis: AnalysisState;
+  locale: Locale;
 }
 
 export default function Results({ analysis }: Props) {
@@ -21,43 +23,36 @@ export default function Results({ analysis }: Props) {
 
   if (!hasIntervalData && !manualMode) {
     return (
-      <main className="mx-auto max-w-5xl px-4 py-10">
-        <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-600">
-          Upload interval data or use the manual peak option to unlock the calculator.
-        </div>
+      <main className="container">
+        <section className="alert alert-info">
+          <h2 className="h4">No analysis results yet</h2>
+          <p>Upload interval data or use the manual peak option to continue.</p>
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
+    <main className="container">
+      <h2 className="h3">Results and panel check</h2>
       {hasIntervalData ? (
         <DemandChart data={analysis.data} chartRef={chartRef} sectionRef={demandSectionRef} />
       ) : (
-        <section
-          ref={demandSectionRef}
-          className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 p-6 text-center text-slate-600"
-        >
-          <p className="text-lg font-semibold text-slate-800">No interval data provided – graph not available.</p>
-          <p className="mt-2 text-sm">
-            The customer-supplied peak value lets you use the calculator, but no demand profile image will be generated.
-          </p>
+        <section ref={demandSectionRef} className="alert alert-warning">
+          <h3 className="h4">No demand profile available</h3>
+          <p>Manual peak mode keeps panel calculations available but does not generate a chart.</p>
         </section>
       )}
       {smocMode && hasIntervalData && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-          NS Power SMOC mode: intervals come from the "Interval Period End Timestamp Local" column, and amperage uses the
-          maximum of Max A(a) and Max A(c) per row. Files with missing Max A columns or malformed timestamps will stop with a
-          clear error.
+        <div className="alert alert-info">
+          NS Power SMOC mode uses "Interval Period End Timestamp Local" and derives amperage from Max A columns.
         </div>
       )}
-      <section className="space-y-6">
+      <section>
         <PanelCalculator analysis={analysis} onVerdictChange={setVerdict} sectionRef={panelSectionRef} />
         {manualMode && (
-          <div className="rounded-2xl border border-amber-500 bg-amber-50 p-4 text-sm text-amber-900">
-            Strong disclaimer: No interval data was uploaded. The peak amperage is derived from a user-entered kWh value and is
-            considered unverified. Use caution when sharing these results and attach documentation showing the original interval
-            reading.
+          <div className="alert alert-warning">
+            Manual peak data is user supplied. Attach source evidence when sharing these results.
           </div>
         )}
         {verdict && (
