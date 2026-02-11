@@ -10,6 +10,10 @@ Scope: entire repository.
 - Prefer TypeScript sources; do not commit build outputs (`dist/`, `tsconfig*.tsbuildinfo`).
 - Keep URLs, workflow triggers, and metadata fork-friendly: prefer relative links, resolve branches via the repo default, and avoid
   hard-coding org/user names or site hosts.
+- All web pages/routes (including `/`, `/en`, `/fr`) must stay dynamic SPA routes handled by client-side routing.
+  Do not add static per-locale HTML entry points (for example `en/index.html` or `fr/index.html`).
+- For GitHub Pages SPA refresh/deep-link support, keep a `public/404.html` fallback that returns users to `index.html` with the
+  original route preserved.
 - All future UI work must align with WET-BOEW and the Canada.ca Content Style Guide:
   - https://github.com/wet-boew/wet-boew
   - https://design.canada.ca/style-guide/
@@ -35,6 +39,7 @@ changed and why. This keeps future agents oriented.
 - 2025-11-21 – GitHub Pages workflow now targets the repo's default branch and app metadata uses relative URLs for forks.
 - 2025-11-22 – Added fork-friendly coding policy to keep branches, URLs, and org names dynamic.
 - 2026-02-11 – Refreshed SPA UI shell to GCWeb/WET patterns, added EN/FR route toggle wiring, and documented Canada.ca content/accessibility rules to keep future UI updates compliant.
+- 2026-02-11 – GitHub Pages SPA routing now uses a 404.html redirect fallback plus configurable base/basename so `/`, `/en`, and `/fr` stay dynamic routes without locale-specific static HTML files.
 
 ## Tasks
 

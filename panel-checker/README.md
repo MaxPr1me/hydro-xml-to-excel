@@ -17,7 +17,7 @@ SPARK is a data-driven analysis tool developed by CanmetENERGY-Ottawa to support
 
 SPARK keeps the same mission as the original Hydro XML to Excel utility viewer: upload CSV, XLSX, or Green Button XML interval data, map its columns, visualize the demand profile, and review a plain-language verdict that summarizes continuous vs. non-continuous loads. The React + Vite experience now uses GCWeb/WET page structure and Canada.ca plain-language content patterns while preserving every parser, mapper, and chart workflow that teams rely on.
 
-_A bilingual UI will be added later._
+All localized pages are client-side **dynamic SPA routes** (`/`, `/en`, `/fr`) handled by React Router. This repository must remain fork-friendly, so it must never depend on static per-locale files like `/en/index.html` or `/fr/index.html`.
 
 ## Features
 
@@ -29,7 +29,7 @@ _A bilingual UI will be added later._
 - 🧮 Plain-language panel calculator that anchors to the absolute one-year max (×1.25), differentiates continuous vs. non-continuous loads, and lets you stack what-if scenarios.
 - 🧾 Manual entry path that converts a user-supplied peak kWh reading into amps so crews can run the calculator even when no file is available; the UI clearly flags these runs as unverified and disables the graph.
 - 📄 Download-ready PDF summary that embeds the demand profile chart (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout.
-- 🌐 Header language toggle (EN/FR route + state wiring). French routes are enabled now and can receive translated strings later.
+- 🌐 Header language toggle (EN/FR route + state wiring). `/`, `/en`, and `/fr` are all dynamic SPA routes, with `/` loading English by default without forced URL redirects.
 - 🔀 Mode toggle for generic Flexible interval data vs. NS Power SMOC XLSX exports; the SMOC path reads "Interval Period End Timestamp Local" and uses the higher of Max A(a)/Max A(c) per interval.
 
 ## Uploading interval data
@@ -80,35 +80,36 @@ order; check off each step before moving on.
    `node -v` works.
 4. **Install dependencies.** Run `cd panel-checker && npm install`. This grabs React, Vite, Plotly, etc.
 5. **Create a production build.** Still inside `panel-checker`, run `npm run build`. The command performs a strict type-check and
-   outputs the static site under `panel-checker/dist`. Vite now uses a relative `base: './'` and the router derives its `basename`
-   from the browser URL, so the generated `index.html`, manifests, and runtime navigation adapt to whatever `/repo-name/` path
-   GitHub Pages assigns—no manual edits are needed when you fork or rename the project.
-6. **Verify the build folder.** Run `ls dist` (while still inside `panel-checker`). You should see `index.html`, `assets/`, and a
-   `manifest.webmanifest`. If the folder is missing, rerun step 5 and fix any red error text.
+   outputs the static site under `panel-checker/dist`. The build uses `VITE_BASE_PATH` (default `/hydro-xml-to-excel/`) for both
+   Vite's `base` and React Router's `basename`.
+6. **Verify SPA fallback files.** Run `ls dist` (while still inside `panel-checker`). You should see `index.html`, `404.html`,
+   `assets/`, and a `manifest.webmanifest`. GitHub Pages serves `404.html` for unknown paths, and that file redirects back to
+   `index.html` while preserving the client-side route so `/en` and `/fr` refresh correctly.
 7. **Commit your work.** From the repo root, run `git add panel-checker && git commit -m "Build panel-checker"` and push it with
    `git push` so GitHub has the latest code. You do **not** need to commit the `dist/` folder because the workflow below rebuilds
    it for you.
 8. **Enable GitHub Pages.** In your fork, open **Settings → Pages**. Under **Build and deployment**, choose **Source: GitHub
    Actions**. Save.
-9. **Review the workflow.** GitHub automatically picks up `.github/workflows/deploy-panel-checker.yml`, installs Node 20, runs
-   `npm ci && npm run build` inside `panel-checker/`, and uploads `panel-checker/dist` as the artifact GitHub Pages serves.
-10. **Watch the deployment.** Go to the **Actions** tab, open the "Deploy panel-checker to Pages" workflow run, and wait for the
+9. **Review the workflow.** GitHub automatically picks up `.github/workflows/deploy-panel-checker.yml`, installs Node 20, injects
+   `VITE_BASE_PATH=/${repo-name}/`, runs `npm ci && npm run build` inside `panel-checker/`, and uploads `panel-checker/dist` as
+   the artifact GitHub Pages serves.
+10. **Watch the deployment.** Go to the **Actions** tab, open the "Deploy Panel Checker to Pages" workflow run, and wait for the
     green check marks. The **deploy** job shows the published URL (usually
     `https://<your-username>.github.io/<repo-name>/`).
-11. **Test the site.** Visit the published URL in a new browser tab. Upload a CSV/XML/XLSX interval file or use the manual peak
-    entry path to confirm that the chart (when data exists), calculator, and PDF report all load.
+11. **Test the site.** Visit the published URL in a new browser tab, then confirm direct navigation and refresh work for
+    `/<repo-name>/`, `/<repo-name>/en`, and `/<repo-name>/fr`.
 12. **Repeat after changes.** Every push to your repository's default branch reruns the workflow. If you make a major UI or build
-    change, ensure the README and this runbook stay accurate (see `AGENTS.md`).
+    change, ensure the README and `AGENTS.md` stay accurate.
 
 ## Preview the GitHub Pages path locally
 
-GitHub Pages hosts this Vite build under a `/repo-name/` subpath (the name of your fork). Because the app emits relative URLs you
-can mimic that subpath locally before pushing:
+GitHub Pages hosts this Vite build under a `/repo-name/` subpath (the name of your fork). Set `VITE_BASE_PATH` explicitly when
+previewing locally so routing and asset URLs match production:
 
 ```bash
 cd panel-checker
 npm install
-npm run build
+VITE_BASE_PATH=/hydro-xml-to-excel/ npm run build
 npm run preview
 ```
 
@@ -119,6 +120,15 @@ that icons, the manifest, and bundled JavaScript load from relative paths.
 If you publish under a custom domain or keep a non-`main` default branch, set `VITE_REPO_URL=https://github.com/<owner>/<repo>`
 and `VITE_DEFAULT_BRANCH=<branch-name>` before running `npm run build`. The in-app license link uses those values to point at
 the correct repository and branch when it cannot infer them from a `*.github.io/<repo>/` host.
+
+
+### GitHub Pages SPA routing rules (required)
+
+- All pages must be handled as **dynamic SPA routes** by React Router.
+- Do **not** add locale-specific static entry points like `en/index.html` or `fr/index.html`.
+- Keep `404.html` as a redirect fallback to `index.html` with the original path encoded, so direct navigation and refreshes on `/en`
+  and `/fr` resolve inside the SPA on GitHub Pages.
+- Keep route links basename-aware (`/en`, `/fr`) so forks work when hosted under `/<repo-name>/`.
 
 ## Repository layout
 

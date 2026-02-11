@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Results from './pages/Results';
 import { AnalysisState } from './types';
 import { Locale, textByLocale } from './content/text';
+import { routeForLocale } from './utils/routing';
 import { initAnalytics, trackToolLoaded } from './analytics';
 import { buildLicenseUrl } from './utils/repoLinks';
 import { useWetEnhance } from './hooks/useWetEnhance';
@@ -25,7 +26,7 @@ function LocaleLayout() {
   const handleAnalysisReady = useCallback(
     (payload: AnalysisState) => {
       setAnalysis(payload);
-      navigate(`/${locale}/results`);
+      navigate(routeForLocale(locale, 'results'));
     },
     [locale, navigate]
   );
@@ -57,10 +58,10 @@ function LocaleLayout() {
           <nav aria-label={text.language.switchLabel} className="text-right">
             <ul className="list-inline mrgn-tp-md mrgn-bttm-0">
               <li>
-                <NavLink to="/en" className={locale === 'en' ? 'font-weight-bold' : ''}>English</NavLink>
+                <NavLink to={routeForLocale('en')} className={locale === 'en' ? 'font-weight-bold' : ''}>English</NavLink>
               </li>
               <li>
-                <NavLink to="/fr" className={locale === 'fr' ? 'font-weight-bold' : ''}>Français</NavLink>
+                <NavLink to={routeForLocale('fr')} className={locale === 'fr' ? 'font-weight-bold' : ''}>Français</NavLink>
               </li>
             </ul>
           </nav>
@@ -72,7 +73,7 @@ function LocaleLayout() {
         </div>
         <nav aria-label="Breadcrumb" className="container">
           <ol className="breadcrumb">
-            <li><NavLink to={`/${locale}`}>{text.nav.upload}</NavLink></li>
+            <li><NavLink to={routeForLocale(locale)}>{text.nav.upload}</NavLink></li>
             <li aria-current="page">{breadcrumbLabel}</li>
           </ol>
         </nav>
@@ -80,7 +81,7 @@ function LocaleLayout() {
           <ul className="list-inline">
             {tabs.map((tab) => (
               <li key={tab.id} className="mrgn-rght-md">
-                <NavLink to={`/${locale}/${tab.path}`} end={!tab.path}>{text.nav[tab.label]}</NavLink>
+                <NavLink to={routeForLocale(locale, tab.path)} end={!tab.path}>{text.nav[tab.label]}</NavLink>
               </li>
             ))}
           </ul>
@@ -88,8 +89,8 @@ function LocaleLayout() {
       </header>
 
       <Routes>
-        <Route path="/" element={<Home onAnalysisReady={handleAnalysisReady} locale={locale} />} />
-        <Route path="/results" element={<Results analysis={analysis} locale={locale} />} />
+        <Route index element={<Home onAnalysisReady={handleAnalysisReady} locale={locale} />} />
+        <Route path="results" element={<Results analysis={analysis} locale={locale} />} />
       </Routes>
 
       <footer id="wb-info">
@@ -104,25 +105,17 @@ function LocaleLayout() {
 }
 
 export default function App() {
-  const navigate = useNavigate();
-
   useEffect(() => {
     initAnalytics();
     trackToolLoaded();
   }, []);
 
-  useEffect(() => {
-    if (window.location.pathname === '/' || window.location.pathname === '') {
-      const storedLocale = localStorage.getItem('spark.locale');
-      const locale = storedLocale === 'fr' ? 'fr' : 'en';
-      navigate(`/${locale}`, { replace: true });
-    }
-  }, [navigate]);
 
   return (
     <Routes>
+      <Route path="/" element={<LocaleLayout />} />
       <Route path="/:lang(en|fr)/*" element={<LocaleLayout />} />
-      <Route path="*" element={<Navigate to="/en" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

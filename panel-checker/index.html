@@ -20,6 +20,24 @@
       gtag('js', new Date());
       gtag('config', 'G-H7D2LYV208');
     </script>
+    <script>
+      (function () {
+        const token = '?/';
+        if (!window.location.search.startsWith(token)) {
+          return;
+        }
+
+        const encoded = window.location.search.slice(token.length);
+        const [pathPart, ...queryParts] = encoded.split('&');
+        const decodedPath = pathPart.replace(/~and~/g, '&');
+        const decodedQuery = queryParts.length
+          ? `?${queryParts.join('&').replace(/~and~/g, '&')}`
+          : '';
+        const nextUrl = `${window.location.pathname}${decodedPath}${decodedQuery}${window.location.hash}`;
+
+        window.history.replaceState(null, '', nextUrl);
+      })();
+    </script>
     <title>SPARK panel assessment tool</title>
   </head>
   <body vocab="http://schema.org/" typeof="WebPage">

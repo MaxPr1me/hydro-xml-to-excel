@@ -3,33 +3,11 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles.css';
-
-const resolveBasename = () => {
-  const rawBase = import.meta.env.BASE_URL ?? '/';
-
-  if (rawBase.startsWith('.')) {
-    const pathname = window.location.pathname.replace(/\/index\.html$/, '');
-    const segments = pathname.split('/').filter(Boolean);
-    const localeIndex = segments.findIndex((segment) => segment === 'en' || segment === 'fr');
-
-    if (localeIndex >= 0) {
-      const baseSegments = segments.slice(0, localeIndex);
-      return baseSegments.length ? `/${baseSegments.join('/')}` : '/';
-    }
-
-    return pathname.endsWith('/') ? pathname.slice(0, -1) || '/' : pathname || '/';
-  }
-
-  if (rawBase !== '/' && rawBase.endsWith('/')) {
-    return rawBase.slice(0, -1);
-  }
-
-  return rawBase || '/';
-};
+import { resolveBasePath } from './utils/routing';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <BrowserRouter basename={resolveBasename()}>
+    <BrowserRouter basename={resolveBasePath()}>
       <App />
     </BrowserRouter>
   </React.StrictMode>
