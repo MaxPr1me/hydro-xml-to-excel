@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirecting…</title>
+    <script>
+      (function () {
+        const { hostname, pathname, search, hash } = window.location;
+        const segments = pathname.split('/').filter(Boolean);
+        const keepSegments = hostname.endsWith('github.io') && segments.length > 0 ? 1 : 0;
+        const basePath = `/${segments.slice(0, keepSegments).join('/')}`;
+        const routePath = `/${segments.slice(keepSegments).join('/')}`;
+        const encodedPath = routePath.replace(/&/g, '~and~');
+        const encodedQuery = search ? `&${search.slice(1).replace(/&/g, '~and~')}` : '';
+        const originPath = basePath === '/' ? '' : basePath;
+
+        window.location.replace(`${originPath}/?/${encodedPath.replace(/^\//, '')}${encodedQuery}${hash}`);
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to the application…</p>
+  </body>
+</html>

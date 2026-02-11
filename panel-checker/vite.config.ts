@@ -2,8 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const basePath = process.env.VITE_BASE_PATH ?? '/hydro-xml-to-excel/';
+
 export default defineConfig({
-  base: './',
+  base: basePath,
   plugins: [
     react(),
     VitePWA({
@@ -20,7 +22,7 @@ export default defineConfig({
         theme_color: '#021b33',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: './',
+        start_url: basePath,
         icons: [
           {
             src: 'icon.svg',
