@@ -8,8 +8,16 @@ const resolveBasename = () => {
   const rawBase = import.meta.env.BASE_URL ?? '/';
 
   if (rawBase.startsWith('.')) {
-    const pathname = new URL(rawBase, window.location.href).pathname;
-    return pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+    const pathname = window.location.pathname.replace(/\/index\.html$/, '');
+    const segments = pathname.split('/').filter(Boolean);
+    const localeIndex = segments.findIndex((segment) => segment === 'en' || segment === 'fr');
+
+    if (localeIndex >= 0) {
+      const baseSegments = segments.slice(0, localeIndex);
+      return baseSegments.length ? `/${baseSegments.join('/')}` : '/';
+    }
+
+    return pathname.endsWith('/') ? pathname.slice(0, -1) || '/' : pathname || '/';
   }
 
   if (rawBase !== '/' && rawBase.endsWith('/')) {
