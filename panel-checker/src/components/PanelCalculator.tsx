@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid';
 import { calculateVerdict, diversifiedLoad } from '../lib/calc';
 import { AnalysisState, IntervalDatum, LoadEntry, PanelInputs, PanelVerdict } from '../types';
 import InfoBubble from './InfoBubble';
-import { textEn } from '../content/text';
+import { useI18n } from '../content/i18n';
 import { trackAnalysisResult } from '../analytics';
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
 const serviceSizes = [60, 70, 80, 100, 125, 150, 200];
 
 export default function PanelCalculator({ analysis, onVerdictChange, sectionRef }: Props) {
+  const { copy, translateError } = useI18n();
   const [inputs, setInputs] = useState<PanelInputs>({
     serviceRating: 100,
     mainBreaker: 100,
@@ -46,7 +47,7 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
     setInputs((prev) => {
       const baseEntry: LoadEntry = {
         id: prev.existingLoads[0]?.id ?? uuid(),
-        name: manualMode ? 'Manual peak demand' : 'One-year peak demand',
+        name: manualMode ? copy.report.manualPeak : copy.chart.peakLine,
         amps: baseline,
         continuous: false
       };
@@ -100,7 +101,7 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
       ...prev,
       [list]: [
         ...prev[list],
-        { id: uuid(), name: list === 'newLoads' ? 'New appliance' : 'Load', amps: 10, continuous: false }
+        { id: uuid(), name: list === 'newLoads' ? copy.calculator.proposedLoads : copy.report.loadFallback, amps: 10, continuous: false }
       ]
     }));
   };
@@ -144,22 +145,22 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
     <section ref={sectionRef} className="space-y-4 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Panel calculator</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{copy.calculator.title}</h2>
           <p className="text-sm text-slate-600">
             {manualMode
-              ? 'Using a user-entered peak interval. Treat these results as provisional until verified with interval data.'
-              : 'Starting from the one-year peak demand, you can apply an adjustment factor and breaker loading to mirror local rules.'}
+              ? copy.calculator.manualIntro
+              : copy.calculator.autoIntro}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <InfoBubble label="Help for panel calculator">{textEn.help.panel}</InfoBubble>
-          <span className={`rounded-full px-4 py-1 text-sm font-semibold ${verdictBadge}`}>{verdict.status}</span>
+          <InfoBubble label={copy.calculator.helpLabel} closeLabel={copy.mapper.closeHelp}>{copy.help.panel}</InfoBubble>
+          <span className={`rounded-full px-4 py-1 text-sm font-semibold ${verdictBadge}`}>{verdict.status === 'OK' ? copy.calculator.statusOk : copy.calculator.statusUpgrade}</span>
         </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm font-medium text-slate-700">
-          Service size
+          {copy.calculator.serviceSize}
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={inputs.serviceRating}
@@ -178,7 +179,7 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
 
         <div className="space-y-2 text-sm font-medium text-slate-700">
           <label className="block">
-            Main breaker
+            {copy.calculator.mainBreaker}
             <input
               type="number"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -199,7 +200,7 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
                   setInputs((prev) => ({ ...prev, breakerLoadingEnabled: event.target.checked }))
                 }
               />
-              Breaker loading?
+              {copy.calculator.breakerLoading}
             </label>
             <div className="flex items-center gap-1">
               <input
@@ -221,7 +222,7 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
 
       <div className="grid gap-6 md:grid-cols-2">
         <LoadList
-          title="Existing load"
+          title={copy.calculator.existingLoad}
           items={inputs.existingLoads}
           onChange={(id, value) => updateLoad('existingLoads', id, value)}
           onRemove={(id) => removeLoad('existingLoads', id)}
@@ -237,7 +238,7 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
                     setInputs((prev) => ({ ...prev, existingAdjustmentEnabled: event.target.checked }))
                   }
                 />
-                Adjustment factor
+                {copy.calculator.adjustmentFactor}
               </label>
               <div className="flex items-center gap-1">
                 <input
@@ -257,13 +258,13 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
           }
           footerText={
             inputs.existingAdjustmentEnabled
-              ? `Diversified total: ${totalExisting.toFixed(1)} A (adjusted to ${adjustedExisting.toFixed(1)} A)`
-              : `Diversified total: ${totalExisting.toFixed(1)} A`
+              ? `${copy.calculator.diversifiedTotal}: ${totalExisting.toFixed(1)} A (${copy.calculator.adjustedTo} ${adjustedExisting.toFixed(1)} A)`
+              : `${copy.calculator.diversifiedTotal}: ${totalExisting.toFixed(1)} A`
           }
         />
 
         <LoadList
-          title="Proposed loads"
+          title={copy.calculator.proposedLoads}
           items={inputs.newLoads}
           onAdd={() => addLoad('newLoads')}
           onChange={(id, value) => updateLoad('newLoads', id, value)}
@@ -273,16 +274,16 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
       </div>
 
       <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-        <p className="font-semibold">Available margin</p>
+        <p className="font-semibold">{copy.calculator.availableMargin}</p>
         <p className="text-2xl font-bold text-slate-900">{verdict.availableMargin.toFixed(1)} A</p>
-        <p>{verdict.message} Always confirm with local code (CEC/NEC) and utility rules.</p>
+        <p>{translateError(verdict.message)} {copy.calculator.alwaysConfirm}</p>
         <p className="mt-2 text-slate-600">
-          Effective main breaker capacity: {effectiveBreaker.toFixed(1)} A (capped by {limitingBreaker} A service/breaker) at{' '}
-          {inputs.breakerLoadingEnabled ? `${inputs.breakerLoadingPercent}%` : '100%'} loading.
+          {copy.calculator.effectiveCapacity}: {effectiveBreaker.toFixed(1)} A (capped by {limitingBreaker} A service/breaker) at{' '}
+          {inputs.breakerLoadingEnabled ? `${inputs.breakerLoadingPercent}%` : '100%'}.
         </p>
         <p className="text-slate-600">
-          Existing load {inputs.existingAdjustmentEnabled ? 'after adjustment' : 'entered'}: {adjustedExisting.toFixed(1)} A ·
-          Proposed additions: {totalNew.toFixed(1)} A.
+          {copy.calculator.existingLoad} {inputs.existingAdjustmentEnabled ? copy.calculator.afterAdjustment : copy.calculator.entered}: {adjustedExisting.toFixed(1)} A ·
+          {copy.calculator.additions}: {totalNew.toFixed(1)} A.
         </p>
       </div>
     </section>
@@ -302,6 +303,7 @@ interface ListProps {
 }
 
 function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst, headerExtras, footerText }: ListProps) {
+  const { copy } = useI18n();
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -315,7 +317,7 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst, h
             className="rounded-full border border-brand-600 px-3 py-1 text-xs font-semibold text-brand-700"
             onClick={onAdd}
           >
-            Add load
+            {copy.calculator.addLoad}
           </button>
         )}
       </div>
@@ -330,7 +332,7 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst, h
               className="rounded-lg border border-slate-200 px-3 py-2"
               value={item.name}
               onChange={(event) => onChange(item.id, { name: event.target.value })}
-              placeholder="Name"
+              placeholder={copy.calculator.loadPlaceholder}
             />
             <input
               type="number"
@@ -345,13 +347,13 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst, h
               onClick={() => onRemove(item.id)}
               disabled={lockFirst && index === 0}
             >
-              Remove
+              {copy.calculator.remove}
             </button>
           </div>
         ))}
       </div>
 
-      <p className="text-xs uppercase tracking-wide text-slate-500">{footerText ?? `Diversified total: ${total.toFixed(1)} A`}</p>
+      <p className="text-xs uppercase tracking-wide text-slate-500">{footerText ?? `${copy.calculator.diversifiedTotal}: ${total.toFixed(1)} A`}</p>
     </div>
   );
 }

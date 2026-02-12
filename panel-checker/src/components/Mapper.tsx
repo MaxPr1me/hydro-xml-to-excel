@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ColumnMapping, CsvPreview, IntervalUnit } from '../types';
 import { guessTimestampColumn, guessValueColumn, mapRecords, type MappingResult } from '../lib/parse';
 import InfoBubble from './InfoBubble';
-import { textEn } from '../content/text';
+import { useI18n } from '../content/i18n';
 import { trackAnalysisError } from '../analytics';
 
 interface Props {
@@ -14,6 +14,7 @@ const units: IntervalUnit[] = ['kWh', 'kW', 'Amps'];
 const voltages: Array<120 | 208 | 240> = [120, 208, 240];
 
 export default function Mapper({ preview, onComplete }: Props) {
+  const { copy, translateError } = useI18n();
   const detectedTimeColumn = useMemo(() => guessTimestampColumn(preview) ?? preview.columns[0] ?? '', [preview]);
   const detectedValueColumn = useMemo(
     () => guessValueColumn(preview, detectedTimeColumn) ?? preview.columns.find((column) => column !== detectedTimeColumn) ?? '',
@@ -44,7 +45,7 @@ export default function Mapper({ preview, onComplete }: Props) {
       onComplete(result);
     } catch (err) {
       const message = (err as Error).message;
-      setError(message);
+      setError(translateError(message));
       const lowered = message.toLowerCase();
       const errorCode =
         lowered.includes('timestep') || lowered.includes('cadence')
@@ -60,15 +61,15 @@ export default function Mapper({ preview, onComplete }: Props) {
     <section className="space-y-3 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Map your columns</h2>
-          <p className="text-sm text-slate-600">Choose the timestamp and measurement fields.</p>
+          <h2 className="text-lg font-semibold text-slate-900">{copy.mapper.title}</h2>
+          <p className="text-sm text-slate-600">{copy.mapper.subtitle}</p>
         </div>
-        <InfoBubble label="Help for column mapping">{textEn.help.mapper}</InfoBubble>
+        <InfoBubble label={copy.mapper.helpLabel} closeLabel={copy.mapper.closeHelp}>{copy.help.mapper}</InfoBubble>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm font-medium text-slate-700">
-          Time column
+          {copy.mapper.time}
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={mapping.timeColumn}
@@ -83,7 +84,7 @@ export default function Mapper({ preview, onComplete }: Props) {
         </label>
 
         <label className="text-sm font-medium text-slate-700">
-          Value column
+          {copy.mapper.value}
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={mapping.valueColumn}
@@ -98,7 +99,7 @@ export default function Mapper({ preview, onComplete }: Props) {
         </label>
 
         <label className="text-sm font-medium text-slate-700">
-          Units
+          {copy.mapper.units}
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={mapping.unit}
@@ -113,7 +114,7 @@ export default function Mapper({ preview, onComplete }: Props) {
         </label>
 
         <label className="text-sm font-medium text-slate-700">
-          System voltage <span className="font-normal text-slate-500">(240 V recommended)</span>
+          {copy.mapper.voltage} <span className="font-normal text-slate-500">{copy.mapper.voltageHint}</span>
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={mapping.voltage}
@@ -139,9 +140,9 @@ export default function Mapper({ preview, onComplete }: Props) {
           className="inline-flex items-center rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
           onClick={handleApply}
         >
-          Continue
+          {copy.mapper.continue}
         </button>
-        <p className="text-xs text-slate-500">We check cadence (15, 30, or 60 minute) automatically.</p>
+        <p className="text-xs text-slate-500">{copy.mapper.cadenceNote}</p>
       </div>
     </section>
   );

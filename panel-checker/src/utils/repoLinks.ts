@@ -54,8 +54,11 @@ export function resolveRepoUrl() {
 }
 
 export function buildLicenseUrl() {
+  const localLicense = new URL('../../LICENSE', window.location.href);
+  if (localLicense) {
+    return localLicense.href;
+  }
   const branch = import.meta.env.VITE_DEFAULT_BRANCH?.trim() || 'main';
   const repoUrl = resolveRepoUrl();
-
-  return repoUrl ? `${repoUrl}/blob/${branch}/LICENSE` : '#';
+  return repoUrl ? `${repoUrl}/blob/${branch}/LICENSE` : 'LICENSE';
 }
