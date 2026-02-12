@@ -11,6 +11,16 @@ Scope: entire repository.
 - Keep URLs, workflow triggers, and metadata fork-friendly: prefer relative links, resolve branches via the repo default, and avoid
   hard-coding org/user names or site hosts.
 
+
+- Any task that changes UI copy, labels, tooltips, validation/errors, or documentation must be completed in both Canadian English and Canadian French.
+
+### Bilingual contributor checklist
+
+- Add or modify i18n keys in both English and French locales.
+- Verify the language toggle updates the full UI without resetting state.
+- Search for untranslated hardcoded strings before committing.
+- Confirm no analysis, parsing, or calculation logic changed.
+
 ## Self-update policy
 
 After every major change to build tooling, hosting, or folder structure, append a bullet to the change log below describing what
@@ -18,6 +28,7 @@ changed and why. This keeps future agents oriented.
 
 ## Change log
 
+- 2026-02-12 – Added bilingual (EN-CA/FR-CA) UI policy and checklist to enforce copy parity and protect immutable calculation logic.
 - 2024-05-16 – Panel Checker promoted to the repo root, Python artifacts removed, GitHub Pages workflow + docs added.
 - 2025-11-16 – Multi-format (CSV/XLSX/XML) ingestion plus one-year normalization added to the Panel Checker uploader.
 - 2025-11-18 – Locked Vite's base to `./` so GitHub Pages serves relative assets, updated README runbook + preview steps.

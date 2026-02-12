@@ -3,30 +3,28 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 
 interface Props {
   label: string;
+  closeLabel?: string;
   children: ReactNode;
 }
 
-export default function InfoBubble({ label, children }: Props) {
+export default function InfoBubble({ label, closeLabel = 'Close help', children }: Props) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return undefined;
-
     const handleClick = (event: MouseEvent) => {
       const target = event.target as Node;
       if (panelRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
       setOpen(false);
     };
-
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpen(false);
         buttonRef.current?.focus();
       }
     };
-
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
     return () => {
@@ -60,12 +58,7 @@ export default function InfoBubble({ label, children }: Props) {
         >
           <div className="flex items-start gap-3">
             <p className="flex-1 whitespace-pre-line">{children}</p>
-            <button
-              type="button"
-              className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-              onClick={() => setOpen(false)}
-              aria-label="Close help"
-            >
+            <button type="button" className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700" onClick={() => setOpen(false)} aria-label={closeLabel}>
               <XMarkIcon className="h-4 w-4" aria-hidden />
             </button>
           </div>

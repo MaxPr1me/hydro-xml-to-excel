@@ -9,6 +9,19 @@ interface SnapshotOptions {
   chartElement: HTMLDivElement;
   data: IntervalDatum[];
   metric: Metric;
+  labels?: {
+    title: string;
+    oneYearPeak: string;
+    percentile95: string;
+    viewing: string;
+    highlights: string;
+    coverage: string;
+    coverageMissing: string;
+    cadence: string;
+    cadenceMissing: string;
+    dataQuality: string;
+    intervals: string;
+  };
 }
 
 export interface SnapshotResult {
@@ -57,13 +70,26 @@ export async function renderDemandProfileSnapshot(options: SnapshotOptions): Pro
 
   context.fillStyle = '#0f172a';
   context.font = '600 28px Inter, sans-serif';
-  context.fillText('Demand profile', padding, padding + 10);
+  const labels = options.labels ?? {
+    title: 'Demand profile',
+    oneYearPeak: 'One-year peak',
+    percentile95: '95th percentile',
+    viewing: 'Viewing',
+    highlights: 'Highlights',
+    coverage: 'Coverage',
+    coverageMissing: 'interval data required',
+    cadence: 'Cadence',
+    cadenceMissing: 'n/a',
+    dataQuality: 'Data quality',
+    intervals: 'intervals'
+  };
+  context.fillText(labels.title, padding, padding + 10);
 
   context.font = '400 16px Inter, sans-serif';
   const metricLabel = options.metric === 'amps' ? 'Amps' : 'kWh';
   const summaryLine = stats
-    ? `One-year peak ${stats.maxAmps.toFixed(0)} A · 95th percentile ${stats.percentile95.toFixed(0)} A · Viewing ${metricLabel}`
-    : `Viewing ${metricLabel}`;
+    ? `${labels.oneYearPeak} ${stats.maxAmps.toFixed(0)} A · ${labels.percentile95} ${stats.percentile95.toFixed(0)} A · ${labels.viewing} ${metricLabel}`
+    : `${labels.viewing} ${metricLabel}`;
   context.fillText(summaryLine, padding, padding + 40);
 
   const chartTop = padding + 60;
@@ -72,15 +98,15 @@ export async function renderDemandProfileSnapshot(options: SnapshotOptions): Pro
 
   const metricsTop = chartTop + chartHeight + 36;
   context.font = '700 16px Inter, sans-serif';
-  context.fillText('Highlights', padding, metricsTop);
+  context.fillText(labels.highlights, padding, metricsTop);
 
   context.font = '400 15px Inter, sans-serif';
   const lineHeight = 26;
   const coverageLine = stats
-    ? `Coverage: ${stats.start.toLocaleDateString()} — ${stats.end.toLocaleDateString()}`
-    : 'Coverage: interval data required';
-  const cadenceLine = stats ? `Cadence: ${stats.cadenceMinutes}-minute data` : 'Cadence: n/a';
-  const qualityLine = `Data quality: ${options.data.length.toLocaleString()} intervals`;
+    ? `${labels.coverage}: ${stats.start.toLocaleDateString()} — ${stats.end.toLocaleDateString()}`
+    : `${labels.coverage}: ${labels.coverageMissing}`;
+  const cadenceLine = stats ? `${labels.cadence}: ${stats.cadenceMinutes}-minute data` : `${labels.cadence}: ${labels.cadenceMissing}`;
+  const qualityLine = `${labels.dataQuality}: ${options.data.length.toLocaleString()} ${labels.intervals}`;
 
   [coverageLine, cadenceLine, qualityLine].forEach((line, index) => {
     context.fillText(line, padding, metricsTop + 12 + lineHeight * (index + 1));

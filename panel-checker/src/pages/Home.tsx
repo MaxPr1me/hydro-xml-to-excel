@@ -3,7 +3,7 @@ import Uploader from '../components/Uploader';
 import Mapper from '../components/Mapper';
 import { AnalysisState, CsvPreview, IntervalDatum, UploadMode } from '../types';
 import type { MappingResult } from '../lib/parse';
-import { textEn } from '../content/text';
+import { useI18n } from '../content/i18n';
 import { convertToAmps } from '../lib/units';
 import {
   trackAnalysisRun,
@@ -24,6 +24,7 @@ export default function Home({ onAnalysisReady }: Props) {
   const [manualError, setManualError] = useState<string | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>('flexible');
+  const { copy, formatDate } = useI18n();
 
   const toAnalyticsMode = (mode: UploadMode) => (mode === 'flexible' ? 'flex' : 'ns_power');
 
@@ -60,7 +61,7 @@ export default function Home({ onAnalysisReady }: Props) {
   const handleManualSubmit = () => {
     const parsed = Number(manualPeakKwh);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setManualError('Enter a positive number for the peak kWh value.');
+      setManualError(copy.home.manualError);
       return;
     }
     setManualError(null);
@@ -93,12 +94,12 @@ export default function Home({ onAnalysisReady }: Props) {
       <section className="relative overflow-hidden rounded-3xl bg-[#0F2941] p-8 text-white shadow-xl">
         <div className="absolute inset-y-0 right-[-80px] w-1/2 rounded-l-full bg-[#0F2941]/70" aria-hidden />
         <div className="relative space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.4em] text-[#FFC933]">{textEn.home.calloutLabel}</p>
-          <h2 className="text-3xl font-bold">{textEn.home.calloutHeading}</h2>
+          <p className="text-sm font-semibold uppercase tracking-[0.4em] text-[#FFC933]">{copy.home.calloutLabel}</p>
+          <h2 className="text-3xl font-bold">{copy.home.calloutHeading}</h2>
           <div className="h-1 w-24 bg-[#FFC933]" aria-hidden />
-          <p className="max-w-2xl text-base text-brand-50">{textEn.home.calloutParagraph}</p>
+          <p className="max-w-2xl text-base text-brand-50">{copy.home.calloutParagraph}</p>
           <ul className="list-disc space-y-1 pl-5 text-sm text-brand-50">
-            {textEn.home.bulletPoints.map((point) => (
+            {copy.home.bulletPoints.map((point) => (
               <li key={point}>{point}</li>
             ))}
           </ul>
@@ -111,21 +112,19 @@ export default function Home({ onAnalysisReady }: Props) {
 
       {result && (
         <div className="rounded-2xl bg-[#FFC933]/20 p-4 text-sm text-[#0F2941]">
-          {textEn.home.summaryPrefix} {result.data.length.toLocaleString()} {textEn.home.summaryCoverageIntro}
+          {copy.home.summaryPrefix} {result.data.length.toLocaleString()} {copy.home.summaryCoverageIntro}
           {' '}
-          {result.coverageStart.toLocaleDateString()} — {result.coverageEnd.toLocaleDateString()}.{' '}
-          {textEn.home.summaryPeakIntro} {result.maxAmps.toFixed(1)} {textEn.home.summaryPeakUnits}
+          {formatDate(result.coverageStart)} — {formatDate(result.coverageEnd)}.{' '}
+          {copy.home.summaryPeakIntro} {result.maxAmps.toFixed(1)} {copy.home.summaryPeakUnits}
         </div>
       )}
 
       <section className="rounded-3xl border border-dashed border-slate-300 bg-white/70 p-6 text-sm text-slate-700">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-700">No file handy?</p>
-          <h3 className="text-xl font-semibold text-slate-900">Jump straight to the calculator</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-700">{copy.home.noFile}</p>
+          <h3 className="text-xl font-semibold text-slate-900">{copy.home.jumpTitle}</h3>
           <p>
-            Confirmed customers occasionally provide only their absolute peak interval reading. Enter that verified kWh value
-            and cadence to run the calculator without uploading a file. The demand chart will be disabled and results will be
-            flagged as unverified user input.
+            {copy.home.jumpBody}
           </p>
         </div>
         <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-inner">
@@ -137,9 +136,9 @@ export default function Home({ onAnalysisReady }: Props) {
               onChange={(event) => setShowManualEntry(event.target.checked)}
             />
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-slate-900">Use a manual peak instead</p>
+              <p className="text-sm font-semibold text-slate-900">{copy.home.manualToggle}</p>
               <p className="text-xs text-slate-600">
-                Check to reveal the fields for a customer-provided peak reading when no interval file is available.
+                {copy.home.manualToggleHelp}
               </p>
             </div>
           </label>
@@ -147,7 +146,7 @@ export default function Home({ onAnalysisReady }: Props) {
           {showManualEntry && (
             <div className="grid gap-4 md:grid-cols-4">
               <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Peak interval energy (kWh)
+                {copy.home.peakInput}
                 <input
                   type="number"
                   min="0"
@@ -159,7 +158,7 @@ export default function Home({ onAnalysisReady }: Props) {
                 />
               </label>
               <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Interval cadence
+                {copy.home.cadenceInput}
                 <select
                   value={manualCadence}
                   onChange={(event) => setManualCadence(Number(event.target.value))}
@@ -173,7 +172,7 @@ export default function Home({ onAnalysisReady }: Props) {
                 </select>
               </label>
               <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Service voltage
+                {copy.home.voltageInput}
                 <select
                   value={manualVoltage}
                   onChange={(event) => setManualVoltage(Number(event.target.value) as 120 | 208 | 240)}
@@ -192,15 +191,14 @@ export default function Home({ onAnalysisReady }: Props) {
                   className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow"
                   onClick={handleManualSubmit}
                 >
-                  Use manual peak
+                  {copy.home.manualButton}
                 </button>
               </div>
             </div>
           )}
           {showManualEntry && manualError && <p className="text-sm text-rose-600">{manualError}</p>}
           <p className="text-xs text-slate-500">
-            Disclaimer: This path never generates a graph. The calculator will mark the run as user-supplied data only, so
-            include proof of the interval reading when submitting to a utility or AHJ.
+            {copy.home.manualDisclaimer}
           </p>
         </div>
       </section>
