@@ -6,18 +6,19 @@ type Copy = typeof en;
 
 export const en = {
   organization: 'CanmetENERGY-Ottawa',
-  toolName: "LEEP's SPARK Tool",
-  subtitle: 'SPARK – System for Peak Amperage from Real kWh',
+  toolName: 'LEEP’s SPARK Tool',
+  subtitle: 'System for Peak Amperage from Real kWh',
   sparkLong: 'SPARK – Système pour la Pointe d’Ampérage à partir des Relevés en kWh',
   heroParagraph:
-    'SPARK is a data-driven analysis tool developed by CanmetENERGY-Ottawa to support electrification retrofits in Canadian homes.',
+    'SPARK is a data-driven analysis tool developed by CanmetENERGY-Ottawa to support electrification retrofits in Canadian homes. Using historical interval meter data, SPARK calculates peak amperage and demonstrated demand so contractors can determine whether a main electrical panel actually requires an upgrade. By relying on real kWh consumption data rather than conservative assumptions, SPARK helps homeowners, utilities, and programs avoid unnecessary panel upgrades.',
   heroTagline: 'Real data. Real peaks. Smarter panel decisions.',
   languageToggle: 'Français',
   logoAlt: 'SPARK load profile logo',
   nav: { upload: 'Upload & validate', results: 'Results' },
   footer: {
     pwa: 'Installable PWA · Works offline after first load.',
-    license: 'License agreement',
+    license:
+      'License: NRCan End-User License Agreement for LEEP’s SPARK Tool (System for Peak Amperage from Real kWh).',
     contact: 'Safety and support contact',
     contactValue: 'leep [at] nrcan-rncan [dot] gc [dot] ca'
   },
@@ -25,10 +26,10 @@ export const en = {
     calloutLabel: 'Interval data workflow',
     calloutHeading: 'Keep electrification projects moving with real kWh data.',
     calloutParagraph:
-      'Confirm whether an electrical panel has the headroom needed for electrification projects.',
+      'Confirm whether an electrical panel has the headroom needed for electrification projects. Import CSV, XLSX, or Green Button XML data, align the columns, and unlock the demand chart plus calculator.',
     bulletPoints: [
       'Validate cadence and units before relying on the data.',
-      'Pick Flexible mode for generic interval data or NS Power SMOC mode.',
+      'Pick Flexible mode for generic interval data or NS Power SMOC mode to auto-read timestamps and Max A columns.',
       'Plot a year of amps or kilowatt-hours to catch spikes and seasonal trends.',
       'Summarize diversified loads plus proposed appliances in one report.'
     ],
@@ -141,25 +142,26 @@ export const en = {
   },
   help: {
     mapper:
-      'Pick the time column and measurement column (kWh, kW, or amps) so SPARK can build the demand profile automatically.',
+      'Pick the column that holds time or timestamp values and the column with your measurement (kWh, kW, or amps). Knowing which column is time and which is the reading lets us build the demand profile automatically.',
     panel:
-      'This calculator shows service/main breaker sizes and lets you test additional loads (heat pumps, EV chargers, ranges).' 
+      'This calculator shows your service and main breaker sizes and lets you test extra loads like heat pumps, EV chargers, or ranges. For heat pumps, enter the Minimum Circuit Ampacity (MCA) from the nameplate to see if the panel can handle new equipment without an upgrade.'
   }
 };
 
 export const fr: Copy = {
   ...en,
   toolName: 'Outil SPARK du LEEP',
-  subtitle: 'SPARK – Système pour la Pointe d’Ampérage à partir des Relevés en kWh',
+  subtitle: 'Système pour la Pointe d’Ampérage à partir des Relevés en kWh',
   heroParagraph:
-    'SPARK est un outil d’analyse fondé sur les données, développé par CanmetÉNERGIE-Ottawa pour soutenir les rénovations d’électrification au Canada.',
+    'SPARK est un outil d’analyse fondé sur les données, développé par CanmetÉNERGIE-Ottawa pour appuyer les rénovations d’électrification dans les habitations canadiennes. À partir de données historiques de compteur à intervalles, SPARK calcule la pointe d’ampérage et la demande démontrée afin que les entrepreneurs puissent déterminer si un panneau électrique principal doit réellement être mis à niveau. En s’appuyant sur des données de consommation réelles en kWh plutôt que sur des hypothèses prudentes, SPARK aide les propriétaires, les services publics et les programmes à éviter des mises à niveau de panneau inutiles.',
   heroTagline: 'Données réelles. Pointes réelles. Décisions plus éclairées pour les panneaux.',
   languageToggle: 'English',
   logoAlt: 'Logo du profil de charge SPARK',
   nav: { upload: 'Téléverser et valider', results: 'Résultats' },
   footer: {
     pwa: 'Application Web installable · Fonctionne hors ligne après le premier chargement.',
-    license: 'Entente de licence',
+    license:
+      'Licence : Entente de licence utilisateur final de RNCan pour l’outil SPARK du LEEP (Système pour la Pointe d’Ampérage à partir des Relevés en kWh).',
     contact: 'Contact sécurité et soutien',
     contactValue: 'leep [at] nrcan-rncan [dot] gc [dot] ca'
   },
@@ -168,10 +170,10 @@ export const fr: Copy = {
     calloutLabel: 'Flux de travail des données intervalle',
     calloutHeading: 'Faites avancer les projets d’électrification avec des données kWh réelles.',
     calloutParagraph:
-      'Confirmez si le panneau électrique dispose de la capacité nécessaire pour les projets d’électrification.',
+      'Confirmez si un panneau électrique dispose de la capacité nécessaire pour des projets d’électrification. Importez des données CSV, XLSX ou XML Green Button, associez les colonnes et activez le graphique de demande ainsi que le calculateur.',
     bulletPoints: [
       'Validez la cadence et les unités avant d’utiliser les données.',
-      'Choisissez le mode Flexible pour les données génériques ou le mode NS Power SMOC.',
+      'Choisissez le mode Flexible pour les données d’intervalle génériques ou le mode NS Power SMOC afin de lire automatiquement les horodatages et les colonnes Max A.',
       'Tracez une année d’ampères ou de kWh pour repérer les pointes et tendances saisonnières.',
       'Résumez les charges diversifiées et les appareils proposés dans un seul rapport.'
     ],
@@ -279,9 +281,9 @@ export const fr: Copy = {
   },
   help: {
     mapper:
-      'Choisissez la colonne de temps et la colonne de mesure (kWh, kW ou ampères) afin que SPARK crée automatiquement le profil de demande.',
+      'Choisissez la colonne qui contient l’heure ou les horodatages, ainsi que la colonne de mesure (kWh, kW ou ampères). En identifiant correctement la colonne de temps et la colonne de lecture, SPARK peut générer automatiquement le profil de demande.',
     panel:
-      'Ce calculateur affiche les tailles de service et de disjoncteur principal et permet de tester des charges additionnelles (thermopompes, bornes VE, cuisinières).'
+      'Ce calculateur présente les calibres de service et de disjoncteur principal, puis vous permet de tester des charges supplémentaires comme les thermopompes, les bornes de recharge de VE ou les cuisinières. Pour les thermopompes, entrez l’intensité minimale du circuit (MCA) indiquée sur la plaque signalétique afin de vérifier si le panneau peut accepter le nouvel équipement sans mise à niveau.'
   }
 };
 
