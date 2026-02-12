@@ -24,14 +24,29 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
     const yLabel = metric === 'amps' ? 'Amps' : 'kWh';
     const hoverSuffix = metric === 'amps' ? 'A' : 'kWh';
     const series = data.map((datum) => (metric === 'amps' ? datum.amps : convertToKwh(datum.value, datum.unit, datum.voltage, datum.intervalMinutes)));
+    const peakIndex = data.reduce((maxIndex, datum, index, records) => (datum.amps > records[maxIndex].amps ? index : maxIndex), 0);
+    const peakTimestamp = data[peakIndex]?.timestamp;
+    const peakValue = series[peakIndex];
     const trace: Data = { x: data.map((d) => d.timestamp), y: series, type: 'scatter', mode: 'lines', line: { color: '#1f6bc4', width: 2 }, name: yLabel, hovertemplate: `%{x}<br>%{y:.2f} ${hoverSuffix}<extra></extra>` };
+    const peakTrace: Data = {
+      x: peakTimestamp ? [peakTimestamp] : [],
+      y: typeof peakValue === 'number' ? [peakValue] : [],
+      type: 'scatter',
+      mode: 'text+markers',
+      marker: { color: '#16a34a', size: 10, line: { color: '#ffffff', width: 1.5 } },
+      text: [copy.chart.peakMarker],
+      textposition: 'top center',
+      textfont: { color: '#166534', size: 12 },
+      name: copy.chart.peakLine,
+      hovertemplate: `${copy.chart.peakLine}<br>%{x}<br>%{y:.2f} ${hoverSuffix}<extra></extra>`
+    };
     const layout: Partial<Layout> = {
       margin: { t: 32, r: 16, b: 48, l: 56 }, paper_bgcolor: 'rgba(255,255,255,0)', plot_bgcolor: 'rgba(255,255,255,0)',
       xaxis: { title: copy.mapper.time, automargin: true }, yaxis: { title: yLabel, rangemode: 'tozero', automargin: true }, showlegend: true,
       legend: { orientation: 'h', x: 0, y: 1.15 }, font: { family: 'Inter, sans-serif', color: '#021b33' }
     };
-    return { data: [trace], layout };
-  }, [copy.mapper.time, data, metric]);
+    return { data: [trace, peakTrace], layout };
+  }, [copy.chart.peakLine, copy.chart.peakMarker, copy.mapper.time, data, metric]);
 
   const chartConfig = useMemo(() => ({ responsive: true, displaylogo: false, modeBarButtonsToRemove: ['select2d', 'lasso2d'] as ModeBarDefaultButtons[] } satisfies Partial<Config>), []);
 
