@@ -111,8 +111,9 @@ The preview server falls back to `index.html` for deep links, so browsing to tha
 that icons, the manifest, and bundled JavaScript load from relative paths.
 
 If you publish under a custom domain or keep a non-`main` default branch, set `VITE_REPO_URL=https://github.com/<owner>/<repo>`
-and `VITE_DEFAULT_BRANCH=<branch-name>` before running `npm run build`. The in-app license link uses those values to point at
-the correct repository and branch when it cannot infer them from a `*.github.io/<repo>/` host.
+and `VITE_DEFAULT_BRANCH=<branch-name>` before running `npm run build`. The footer License/Licence link is fork-safe: it derives
+`owner/repo` from `*.github.io/<repo>/` when possible, infers a branch from URL paths such as `/<repo>/<branch>/`, then falls
+back to `VITE_DEFAULT_BRANCH` (or `main`). Set `VITE_REPO_URL` and `VITE_DEFAULT_BRANCH` to override this behaviour in forks.
 
 ## Repository layout
 

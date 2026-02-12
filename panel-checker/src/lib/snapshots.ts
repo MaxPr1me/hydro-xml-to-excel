@@ -141,6 +141,36 @@ function cloneWithInlineStyles(node: HTMLElement): HTMLElement {
   return clone;
 }
 
+
+function syncFormControlValues(source: HTMLElement, target: HTMLElement) {
+  const sourceControls = Array.from(source.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea'));
+  const targetControls = Array.from(target.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea'));
+
+  sourceControls.forEach((control, index) => {
+    const targetControl = targetControls[index];
+    if (!targetControl) return;
+
+    if (control instanceof HTMLInputElement && targetControl instanceof HTMLInputElement) {
+      targetControl.value = control.value;
+      targetControl.checked = control.checked;
+      return;
+    }
+
+    if (control instanceof HTMLTextAreaElement && targetControl instanceof HTMLTextAreaElement) {
+      targetControl.value = control.value;
+      targetControl.textContent = control.value;
+      return;
+    }
+
+    if (control instanceof HTMLSelectElement && targetControl instanceof HTMLSelectElement) {
+      targetControl.value = control.value;
+      Array.from(targetControl.options).forEach((option) => {
+        option.selected = option.value === control.value;
+      });
+    }
+  });
+}
+
 function pruneExcludedElements(element: HTMLElement) {
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_ELEMENT);
   const toRemove: Element[] = [];
@@ -166,6 +196,7 @@ export async function renderElementSnapshot({
   const height = Math.max(1, Math.ceil(rect.height || element.offsetHeight));
 
   const cloned = cloneWithInlineStyles(element);
+  syncFormControlValues(element, cloned);
   pruneExcludedElements(cloned);
 
   const serializer = new XMLSerializer();

@@ -17,8 +17,7 @@ export const en = {
   nav: { upload: 'Upload & validate', results: 'Results' },
   footer: {
     pwa: 'Installable PWA · Works offline after first load.',
-    license:
-      'License: NRCan End-User License Agreement for LEEP’s SPARK Tool (System for Peak Amperage from Real kWh).',
+    license: 'License',
     contact: 'Safety and support contact',
     contactValue: 'leep [at] nrcan-rncan [dot] gc [dot] ca'
   },
@@ -96,7 +95,8 @@ export const en = {
     coverage: 'Coverage',
     dataQuality: 'Data quality',
     intervals: 'intervals',
-    unableExport: 'Unable to export the demand profile.'
+    unableExport: 'Unable to export the demand profile.',
+    peakMarker: 'Peak'
   },
   calculator: {
     title: 'Panel calculator',
@@ -106,9 +106,15 @@ export const en = {
     serviceSize: 'Service size',
     mainBreaker: 'Main breaker',
     breakerLoading: 'Breaker loading?',
+    breakerLoadingInfoLabel: 'About breaker loading',
+    breakerLoadingHelp:
+      'Ontario and BC use 100% breaker loading for demonstrated load. Nova Scotia uses 80% breaker loading.',
     existingLoad: 'Existing load',
     proposedLoads: 'Proposed loads',
     adjustmentFactor: 'Adjustment factor',
+    adjustmentFactorInfoLabel: 'About adjustment factor',
+    adjustmentFactorHelp:
+      'Ontario and BC use a 125% adjustment factor when using hourly (60-minute) kWh data.',
     diversifiedTotal: 'Diversified total',
     adjustedTo: 'adjusted to',
     addLoad: 'Add load',
@@ -160,8 +166,7 @@ export const fr: Copy = {
   nav: { upload: 'Téléverser et valider', results: 'Résultats' },
   footer: {
     pwa: 'Application Web installable · Fonctionne hors ligne après le premier chargement.',
-    license:
-      'Licence : Entente de licence utilisateur final de RNCan pour l’outil SPARK du LEEP (Système pour la Pointe d’Ampérage à partir des Relevés en kWh).',
+    license: 'Licence',
     contact: 'Contact sécurité et soutien',
     contactValue: 'leep [at] nrcan-rncan [dot] gc [dot] ca'
   },
@@ -239,7 +244,8 @@ export const fr: Copy = {
     coverage: 'Couverture',
     dataQuality: 'Qualité des données',
     intervals: 'intervalles',
-    unableExport: 'Impossible d’exporter le profil de demande.'
+    unableExport: 'Impossible d’exporter le profil de demande.',
+    peakMarker: 'Pointe'
   },
   calculator: {
     ...en.calculator,
@@ -250,9 +256,15 @@ export const fr: Copy = {
     serviceSize: 'Taille du service',
     mainBreaker: 'Disjoncteur principal',
     breakerLoading: 'Chargement du disjoncteur?',
+    breakerLoadingInfoLabel: 'À propos du chargement du disjoncteur',
+    breakerLoadingHelp:
+      'L’Ontario et la Colombie-Britannique utilisent un chargement du disjoncteur de 100 % pour la charge démontrée. La Nouvelle-Écosse utilise un chargement du disjoncteur de 80 %.',
     existingLoad: 'Charge existante',
     proposedLoads: 'Charges proposées',
     adjustmentFactor: 'Facteur d’ajustement',
+    adjustmentFactorInfoLabel: 'À propos du facteur d’ajustement',
+    adjustmentFactorHelp:
+      'L’Ontario et la Colombie-Britannique utilisent un facteur d’ajustement de 125 % avec des données horaires (60 minutes) en kWh.',
     addLoad: 'Ajouter une charge',
     remove: 'Retirer',
     availableMargin: 'Marge disponible',

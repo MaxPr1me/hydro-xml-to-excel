@@ -69,8 +69,9 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
   useEffect(() => {
     setInputs((prev) => ({
       ...prev,
+      breakerLoadingEnabled: true,
       existingAdjustmentEnabled: cadenceMinutes === 60,
-      existingAdjustmentPercent: prev.existingAdjustmentPercent || 125
+      existingAdjustmentPercent: cadenceMinutes === 60 ? 125 : prev.existingAdjustmentPercent
     }));
   }, [cadenceMinutes, resetKey]);
 
@@ -202,6 +203,9 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
               />
               {copy.calculator.breakerLoading}
             </label>
+            <InfoBubble label={copy.calculator.breakerLoadingInfoLabel} closeLabel={copy.mapper.closeHelp}>
+              {copy.calculator.breakerLoadingHelp}
+            </InfoBubble>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -240,6 +244,9 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
                 />
                 {copy.calculator.adjustmentFactor}
               </label>
+              <InfoBubble label={copy.calculator.adjustmentFactorInfoLabel} closeLabel={copy.mapper.closeHelp}>
+                {copy.calculator.adjustmentFactorHelp}
+              </InfoBubble>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -304,6 +311,18 @@ interface ListProps {
 
 function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst, headerExtras, footerText }: ListProps) {
   const { copy } = useI18n();
+  const [draftAmpValues, setDraftAmpValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setDraftAmpValues((prev) => {
+      const next: Record<string, string> = {};
+      items.forEach((item) => {
+        next[item.id] = prev[item.id] ?? item.amps.toString();
+      });
+      return next;
+    });
+  }, [items]);
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -338,8 +357,19 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst, h
               type="number"
               min={0}
               className="rounded-lg border border-slate-200 px-3 py-2"
-              value={item.amps}
-              onChange={(event) => onChange(item.id, { amps: Number(event.target.value) })}
+              value={draftAmpValues[item.id] ?? item.amps.toString()}
+              onChange={(event) => {
+                const value = event.target.value;
+                setDraftAmpValues((prev) => ({ ...prev, [item.id]: value }));
+                if (value === '') {
+                  onChange(item.id, { amps: 0 });
+                  return;
+                }
+                const parsed = Number(value);
+                if (!Number.isNaN(parsed)) {
+                  onChange(item.id, { amps: parsed });
+                }
+              }}
             />
             <button
               type="button"
