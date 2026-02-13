@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate, NavLink, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import Home from './pages/Home';
 import Results from './pages/Results';
 import { AnalysisState } from './types';
 import { I18nContext, Language, localizeError, translations } from './content/i18n';
 import { initAnalytics, trackToolLoaded } from './analytics';
 import { buildLicenseUrl } from './utils/repoLinks';
+import { applySeo } from './lib/seo';
 
 const LANG_STORAGE_KEY = 'spark-lang';
 
@@ -15,6 +16,7 @@ export default function App() {
   const initialLang = (searchParams.get('lang') as Language) || (localStorage.getItem(LANG_STORAGE_KEY) as Language) || 'en';
   const [lang, setLang] = useState<Language>(initialLang === 'fr' ? 'fr' : 'en');
   const navigate = useNavigate();
+  const location = useLocation();
   const sparkLogoUrl = `${import.meta.env.BASE_URL}spark-logo.svg`;
 
   const copy = translations[lang];
@@ -23,6 +25,11 @@ export default function App() {
     initAnalytics();
     trackToolLoaded();
   }, []);
+
+
+  useEffect(() => {
+    applySeo(lang, location.pathname);
+  }, [lang, location.pathname]);
 
   useEffect(() => {
     localStorage.setItem(LANG_STORAGE_KEY, lang);
