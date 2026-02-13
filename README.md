@@ -115,6 +115,21 @@ and `VITE_DEFAULT_BRANCH=<branch-name>` before running `npm run build`. The foot
 `owner/repo` from `*.github.io/<repo>/` when possible, infers a branch from URL paths such as `/<repo>/<branch>/`, then falls
 back to `VITE_DEFAULT_BRANCH` (or `main`). Set `VITE_REPO_URL` and `VITE_DEFAULT_BRANCH` to override this behaviour in forks.
 
+
+## Static SEO notes / Notes SEO statiques
+
+- EN: SEO metadata (title/description/Open Graph/Twitter/JSON-LD/canonical/hreflang) is language-aware and updated client-side for `?lang=en` and `?lang=fr`.
+- FR: Les métadonnées SEO (title/description/Open Graph/Twitter/JSON-LD/canonical/hreflang) sont adaptées à la langue et mises à jour côté client pour `?lang=en` et `?lang=fr`.
+
+- EN: Root crawl files live in `panel-checker/public/robots.txt` and `panel-checker/public/sitemap.xml`.
+- FR: Les fichiers d’exploration à la racine se trouvent dans `panel-checker/public/robots.txt` et `panel-checker/public/sitemap.xml`.
+
+- EN: Before production indexing, replace `https://YOUR_GITHUB_PAGES_HOST/YOUR_REPO/` placeholders in `sitemap.xml` with your deployed Pages URL, then submit `/sitemap.xml` in Google Search Console.
+- FR: Avant l’indexation en production, remplacez les espaces réservés `https://YOUR_GITHUB_PAGES_HOST/YOUR_REPO/` dans `sitemap.xml` par l’URL Pages déployée, puis soumettez `/sitemap.xml` dans Google Search Console.
+
+- EN: Add your Search Console token to `<meta name="google-site-verification" ...>` in `panel-checker/index.html` (and keep the mirrored runtime value in `panel-checker/src/lib/seo.ts`).
+- FR: Ajoutez votre jeton Search Console à `<meta name="google-site-verification" ...>` dans `panel-checker/index.html` (et gardez la valeur miroir côté exécution dans `panel-checker/src/lib/seo.ts`).
+
 ## Repository layout
 
 ```
