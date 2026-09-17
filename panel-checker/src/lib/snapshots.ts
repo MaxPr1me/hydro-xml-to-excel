@@ -150,9 +150,16 @@ function syncFormControlValues(source: HTMLElement, target: HTMLElement) {
     const targetControl = targetControls[index];
     if (!targetControl) return;
 
+    // XMLSerializer captures attributes, not live properties, so mirror values onto attributes too.
     if (control instanceof HTMLInputElement && targetControl instanceof HTMLInputElement) {
       targetControl.value = control.value;
+      targetControl.setAttribute('value', control.value);
       targetControl.checked = control.checked;
+      if (control.checked) {
+        targetControl.setAttribute('checked', 'checked');
+      } else {
+        targetControl.removeAttribute('checked');
+      }
       return;
     }
 
@@ -166,6 +173,11 @@ function syncFormControlValues(source: HTMLElement, target: HTMLElement) {
       targetControl.value = control.value;
       Array.from(targetControl.options).forEach((option) => {
         option.selected = option.value === control.value;
+        if (option.selected) {
+          option.setAttribute('selected', 'selected');
+        } else {
+          option.removeAttribute('selected');
+        }
       });
     }
   });
