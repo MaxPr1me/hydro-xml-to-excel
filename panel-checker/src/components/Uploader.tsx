@@ -32,6 +32,7 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
   const inputRef = useRef<HTMLInputElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const jobIdRef = useRef(0);
+  const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -82,8 +83,10 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
     return new Promise<{ preview: CsvPreview; warning?: string }>((resolve, reject) => {
       const timeoutId = window.setTimeout(() => {
         cleanup();
+        worker.terminate();
+        if (workerRef.current === worker) workerRef.current = null;
         reject(new Error('Excel parsing timed out. Try again or use a smaller file.'));
-      }, 20_000);
+      }, 60_000);
       const cleanup = () => {
         worker.removeEventListener('message', handleMessage as EventListener);
         worker.removeEventListener('error', handleError as EventListener);
@@ -106,6 +109,8 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
   }, [ensureWorker]);
 
   const handleFiles = useCallback(async (file: File) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setIsLoading(true);
     setStatusMessage(null);
@@ -156,6 +161,7 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
       setError(message);
       trackAnalysisError({ stage: 'upload', errorCode: resolveUploadErrorCode(message) });
     } finally {
+      busyRef.current = false;
       setStatusMessage(null);
       setIsLoading(false);
     }

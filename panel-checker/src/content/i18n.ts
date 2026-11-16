@@ -89,6 +89,11 @@ export const en = {
     manualBanner:
       'Strong disclaimer: No interval data was uploaded. Peak amperage is derived from user-entered kWh and is unverified.'
   },
+  crash: {
+    title: 'Something went wrong',
+    body: 'The tool ran into an unexpected error while displaying this page. Reload the page to try again.',
+    reload: 'Reload page'
+  },
   chart: {
     title: 'Demand profile',
     peakLine: 'One-year peak',
@@ -96,7 +101,7 @@ export const en = {
     view: 'View',
     cadenceBadge: (minutes: number) => `${minutes}-minute cadence`,
     cadenceValue: (minutes: number) => `${minutes} minute`,
-    download: 'Download demand profile PNG',
+    download: 'Download demand profile image',
     demandChart: 'Demand chart',
     coverage: 'Coverage',
     dataQuality: 'Data quality',
@@ -138,7 +143,7 @@ export const en = {
     statusUpgrade: 'Upgrade'
   },
   report: {
-    title: 'One-page report',
+    title: 'Summary report',
     subtitle: 'Copy the highlights for your permit package.',
     download: 'Download report',
     coverage: 'Coverage',
@@ -304,6 +309,11 @@ export const fr: Copy = {
     manualBanner:
       'Avertissement important : aucune donnée intervalle n’a été téléversée. L’ampérage de pointe provient d’un kWh saisi par l’utilisateur et n’est pas vérifié.'
   },
+  crash: {
+    title: 'Un problème est survenu',
+    body: 'L’outil a rencontré une erreur inattendue lors de l’affichage de cette page. Rechargez la page pour réessayer.',
+    reload: 'Recharger la page'
+  },
   chart: {
     title: 'Profil de demande',
     peakLine: 'Pointe annuelle',
@@ -311,7 +321,7 @@ export const fr: Copy = {
     view: 'Vue',
     cadenceBadge: (minutes: number) => `Cadence de ${minutes} minutes`,
     cadenceValue: (minutes: number) => `${minutes} minutes`,
-    download: 'Télécharger le PNG du profil de demande',
+    download: 'Télécharger l’image du profil de demande',
     demandChart: 'Graphique de demande',
     coverage: 'Couverture',
     dataQuality: 'Qualité des données',
@@ -353,7 +363,7 @@ export const fr: Copy = {
     statusUpgrade: 'Mise à niveau requise'
   },
   report: {
-    title: 'Rapport d’une page',
+    title: 'Rapport sommaire',
     subtitle: 'Copiez les points saillants pour votre dossier de permis.',
     download: 'Télécharger le rapport',
     coverage: 'Couverture',

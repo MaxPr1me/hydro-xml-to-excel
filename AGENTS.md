@@ -62,6 +62,10 @@ changed and why. This keeps future agents oriented.
 - 2026-11-16 – Added bilingual decision-making policy (no assumptions, ask before choosing paths, disclose shortcuts) and changed panel calculator defaults (breaker loading off except NS SMOC at 80%; adjustment factor on at 125%).
 - 2026-11-16 – Added bilingual fork-compatibility policy: code must stay dynamic because it is forked and updated downstream at https://canmet-energy.github.io/leep-spark-tool/.
 - 2026-11-16 – Completed EN-CA/FR-CA parity: full French copy (no English fallbacks), `messages` catalogue + pattern matching for `src/lib` errors, WinAnsi-encoded PDF text for accents, localized PNG snapshots, and Plotly French locale (`src/content/plotlyLocaleFr.ts`).
+- 2026-11-16 – Bundled the pinned SheetJS package for offline XLSX parsing, switched the split worker to ES modules, tightened GitHub Actions permissions, and added a build-time CSP with generated script hashes.
+- 2026-11-16 – Intégration de SheetJS épinglé pour l’analyse XLSX hors ligne, passage du worker fractionné aux modules ES, restriction des permissions GitHub Actions et ajout d’une CSP à la compilation avec empreintes de scripts générées.
+- 2026-11-16 – Fixed parser selection for energy/value columns and delivered Green Button streams, corrected UTC instant handling, added multi-page PDF output and JPG export, and hardened uploads, analytics, storage, and rendering errors.
+- 2026-11-16 – Correction de la sélection des colonnes d’énergie/valeur et des séries Green Button livrées, du traitement des instants UTC, ajout des PDF multipages et de l’exportation JPG, et renforcement des téléversements, des analyses, du stockage et de la gestion des erreurs d’affichage.
 
 ## Tasks
 
@@ -69,6 +73,8 @@ changed and why. This keeps future agents oriented.
 - 2025-11-23 – Remove Excel auto-conversion fallback from the UI, worker, and helpers so only the primary CSV/XLSX/XML parsers run.
 - 2025-11-23 – Add upload mode toggle for flexible data vs. NS Power SMOC files, implement a dedicated SMOC parser that derives amperage across phases, and route the chosen mode through the analyzer.
 - 2025-11-23 – Update copy, documentation, and tests to cover the new modes, NS Power assumptions, and the refreshed parsing rules.
+- 2026-11-16 – Verified the approved bug and security fixes against representative CSV, XLSX, Green Button XML, and SMOC samples; kept utility samples ignored and added focused parser/PDF regression tests.
+- 2026-11-16 – Vérification des corrections approuvées de bogues et de sécurité avec des échantillons représentatifs CSV, XLSX, XML Green Button et SMOC; maintien des échantillons de services publics dans les fichiers ignorés et ajout de tests de régression ciblés pour l’analyse et les PDF.
 
 ## SEO architecture / Architecture SEO
 

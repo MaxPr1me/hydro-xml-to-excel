@@ -111,7 +111,7 @@ export function trackAnalysisResult(opts: {
 }
 
 export function trackSummaryDownload(opts: {
-  format: 'pdf' | 'png';
+  format: 'pdf' | 'jpg';
   method: 'verified' | 'manual_peak';
   hasData: boolean;
 }) {

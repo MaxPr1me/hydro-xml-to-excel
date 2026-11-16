@@ -1,6 +1,6 @@
 import { type MutableRefObject } from 'react';
 import { AnalysisState, PanelVerdict } from '../types';
-import { computeDemandStats } from '../lib/parse';
+import { tryComputeDemandStats } from '../lib/parse';
 import { renderDemandProfileSnapshot, renderElementSnapshot, snapshotToBytes } from '../lib/snapshots';
 import { buildSummaryPdf } from '../lib/pdf';
 import { trackAnalysisError, trackSummaryDownload } from '../analytics';
@@ -18,7 +18,7 @@ interface Props {
 export default function ReportCard({ analysis, verdict, reportSectionRef, demandSectionRef, panelSectionRef, chartRef }: Props) {
   const { copy, formatDate, translateError } = useI18n();
   const data = analysis.data;
-  const stats = computeDemandStats(data);
+  const stats = tryComputeDemandStats(data);
   const manualMode = analysis.source === 'manual' && !!analysis.manualPeak;
   const hasIntervalData = analysis.source === 'file' && analysis.data.length > 0;
 
@@ -50,12 +50,14 @@ export default function ReportCard({ analysis, verdict, reportSectionRef, demand
       });
 
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(pdf);
+      const url = URL.createObjectURL(pdf);
+      link.href = url;
       link.download = 'leep-spark-panel-report.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
+      // Revoking immediately can cancel the download in Safari/Firefox before it starts.
+      window.setTimeout(() => URL.revokeObjectURL(url), 40_000);
       trackSummaryDownload({ format: 'pdf', method: manualMode ? 'manual_peak' : 'verified', hasData: hasIntervalData });
     } catch (error) {
       trackAnalysisError({ stage: 'report', errorCode: 'REPORT_EXPORT_FAILED' });

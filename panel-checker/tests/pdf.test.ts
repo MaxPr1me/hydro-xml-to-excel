@@ -23,6 +23,26 @@ describe('summary pdf builder', () => {
     assert.ok(content.includes('%%EOF'));
   });
 
+  it('flows full-width images onto extra pages and scales down only images taller than a page', async () => {
+    const square = { data: new Uint8Array([255, 216, 255, 217]), width: 1024, height: 1024 };
+    const tall = { data: new Uint8Array([255, 216, 255, 217]), width: 400, height: 2000 };
+    const blob = buildSummaryPdf({
+      documentTitle: 'Summary report',
+      sections: [
+        { title: 'Report', image: square },
+        { title: 'Calculator', image: square },
+        { title: 'Profile', image: tall }
+      ],
+      disclaimer: 'Screening only'
+    });
+    const content = Buffer.from(await blob.arrayBuffer()).toString('latin1');
+
+    assert.ok(content.includes('/Count 3'));
+    assert.equal(content.match(/\/Type \/Page /g)?.length, 3);
+    assert.equal(content.match(/512 0 0 512 50 /g)?.length, 2);
+    assert.ok(content.includes('133 0 0 664 50 '));
+  });
+
   it('encodes French accents and typographic punctuation as WinAnsi escapes', async () => {
     const blob = buildSummaryPdf({
       documentTitle: 'Rapport d’une page — Électricité',

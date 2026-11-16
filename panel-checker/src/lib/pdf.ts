@@ -56,72 +56,94 @@ function escapePdfText(text: string) {
   return result;
 }
 
-function buildCombinedSectionsContent(
+const PAGE_WIDTH = 612;
+const PAGE_HEIGHT = 792;
+const MARGIN_X = 50;
+const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
+const TOP_Y = 760;
+const BOTTOM_Y = 50;
+const DOCUMENT_TITLE_HEIGHT = 28;
+const SECTION_TITLE_HEIGHT = 18;
+const SECTION_GAP = 16;
+const BLOCK_GAP = 14;
+const PLACEHOLDER_HEIGHT = 160;
+// Tallest block that still fits under the document title on the first page, so no page is ever left empty.
+const MAX_BLOCK_HEIGHT = TOP_Y - DOCUMENT_TITLE_HEIGHT - SECTION_TITLE_HEIGHT - BOTTOM_Y;
+
+function layoutPages(
   documentTitle: string,
   sections: SummarySection[],
   imageNames: Array<string | null>,
   disclaimer?: string
-) {
-  const lines: string[] = [];
-  let cursorY = 760;
+): string[] {
+  const pages: string[] = [];
+  let lines: string[] = [];
+  let cursorY = TOP_Y;
+  let pageHasSection = false;
 
-  lines.push('BT');
-  lines.push('/F1 16 Tf');
-  lines.push(`50 ${cursorY} Td`);
-  lines.push(`(${escapePdfText(documentTitle)}) Tj`);
-  lines.push('ET');
-  cursorY -= 28;
+  const startNewPage = () => {
+    pages.push(lines.join('\n'));
+    lines = [];
+    cursorY = TOP_Y;
+    pageHasSection = false;
+  };
+  const drawText = (size: number, x: number, y: number, value: string) => {
+    lines.push('BT', `/F1 ${size} Tf`, `${x} ${y} Td`, `(${escapePdfText(value)}) Tj`, 'ET');
+  };
 
-  const contentWidth = 512;
-  const availableHeight = cursorY - (disclaimer ? 70 : 60);
-  const maxSectionHeight = Math.max(180, Math.floor(availableHeight / sections.length) - 20);
+  drawText(16, MARGIN_X, cursorY, documentTitle);
+  cursorY -= DOCUMENT_TITLE_HEIGHT;
 
   sections.forEach((section, index) => {
-    if (index > 0) {
-      cursorY -= 16;
-    }
-
-    lines.push('BT');
-    lines.push('/F1 13 Tf');
-    lines.push(`50 ${cursorY} Td`);
-    lines.push(`(${escapePdfText(section.title)}) Tj`);
-    lines.push('ET');
-    cursorY -= 18;
-
     const imageName = imageNames[index];
-
+    let block: { width: number; height: number } | null = null;
     if (section.image && imageName) {
-      const scaledHeight = Math.min(maxSectionHeight, Math.round((contentWidth * section.image.height) / section.image.width));
-      const imageY = Math.max(cursorY - scaledHeight, 80);
-
-      lines.push('q');
-      lines.push(`${contentWidth} 0 0 ${scaledHeight} 50 ${imageY} cm`);
-      lines.push(`/${imageName} Do`);
-      lines.push('Q');
-      cursorY = imageY - 14;
+      // Full content width with the original aspect ratio; only images taller than a page are scaled down.
+      let width = CONTENT_WIDTH;
+      let height = Math.round((CONTENT_WIDTH * section.image.height) / section.image.width);
+      if (height > MAX_BLOCK_HEIGHT) {
+        width = Math.round((MAX_BLOCK_HEIGHT * section.image.width) / section.image.height);
+        height = MAX_BLOCK_HEIGHT;
+      }
+      block = { width, height };
     } else if (section.placeholder) {
-      const placeholderHeight = Math.min(maxSectionHeight, 160);
-      const placeholderY = Math.max(cursorY - placeholderHeight, 80);
-      lines.push('0.95 0.96 0.98 rg');
-      lines.push(`50 ${placeholderY} ${contentWidth} ${placeholderHeight} re f`);
-      lines.push('BT');
-      lines.push('/F1 11 Tf');
-      lines.push(`60 ${placeholderY + placeholderHeight / 2} Td`);
-      lines.push(`(${escapePdfText(section.placeholder)}) Tj`);
-      lines.push('ET');
-      cursorY = placeholderY - 14;
+      block = { width: CONTENT_WIDTH, height: PLACEHOLDER_HEIGHT };
     }
+
+    const needed = (pageHasSection ? SECTION_GAP : 0) + SECTION_TITLE_HEIGHT + (block?.height ?? 0);
+    if (cursorY - needed < BOTTOM_Y) {
+      startNewPage();
+    }
+    if (pageHasSection) {
+      cursorY -= SECTION_GAP;
+    }
+
+    drawText(13, MARGIN_X, cursorY, section.title);
+    cursorY -= SECTION_TITLE_HEIGHT;
+
+    if (block && section.image && imageName) {
+      const imageY = cursorY - block.height;
+      lines.push('q', `${block.width} 0 0 ${block.height} ${MARGIN_X} ${imageY} cm`, `/${imageName} Do`, 'Q');
+      cursorY = imageY - BLOCK_GAP;
+    } else if (block && section.placeholder) {
+      const placeholderY = cursorY - block.height;
+      // q/Q scopes the light fill so the placeholder label and later text stay black.
+      lines.push('q', '0.95 0.96 0.98 rg', `${MARGIN_X} ${placeholderY} ${block.width} ${block.height} re f`, 'Q');
+      drawText(11, MARGIN_X + 10, placeholderY + block.height / 2, section.placeholder);
+      cursorY = placeholderY - BLOCK_GAP;
+    }
+    pageHasSection = true;
   });
 
   if (disclaimer) {
-    lines.push('BT');
-    lines.push('/F1 9 Tf');
-    lines.push(`50 ${Math.max(cursorY, 60)} Td`);
-    lines.push(`(${escapePdfText(disclaimer)}) Tj`);
-    lines.push('ET');
+    if (cursorY < BOTTOM_Y - 10) {
+      startNewPage();
+    }
+    drawText(9, MARGIN_X, cursorY, disclaimer);
   }
 
-  return lines.join('\n');
+  pages.push(lines.join('\n'));
+  return pages;
 }
 
 export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
@@ -141,13 +163,14 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
 
   let nextId = 4;
   const imageIds = options.sections.map((section) => (section.image ? nextId++ : null));
-  const contentId = nextId++;
-  const pageId = nextId++;
+  const imageNames = options.sections.map((section, index) => (section.image ? `Im${index + 1}` : null));
+  const pageContents = layoutPages(options.documentTitle, options.sections, imageNames, options.disclaimer);
+  const pageObjects = pageContents.map(() => ({ contentId: nextId++, pageId: nextId++ }));
 
-  const kidsRefs = `${pageId} 0 R`;
+  const kidsRefs = pageObjects.map(({ pageId }) => `${pageId} 0 R`).join(' ');
 
   const catalog = encode(`${catalogId} 0 obj\n<< /Type /Catalog /Pages ${pagesId} 0 R >>\nendobj\n`);
-  const pages = encode(`${pagesId} 0 obj\n<< /Type /Pages /Kids [${kidsRefs}] /Count 1 >>\nendobj\n`);
+  const pages = encode(`${pagesId} 0 obj\n<< /Type /Pages /Kids [${kidsRefs}] /Count ${pageObjects.length} >>\nendobj\n`);
   const font = encode(`${fontId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n`);
 
   const addObject = (id: number, bytes: Uint8Array) => {
@@ -177,22 +200,6 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
     }
   });
 
-  const imageNames = options.sections.map((section, index) => (section.image ? `Im${index + 1}` : null));
-  const contentString = buildCombinedSectionsContent(
-    options.documentTitle,
-    options.sections,
-    imageNames,
-    options.disclaimer
-  );
-  const contentBytes = encode(contentString);
-  const content = concatBytes(
-    encode(`${contentId} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`),
-    contentBytes,
-    encode('\nendstream\nendobj\n')
-  );
-
-  addObject(contentId, content);
-
   const resourceParts = [`/Font << /F1 ${fontId} 0 R >>`];
   const xObjectEntries = imageNames
     .map((name, index) => {
@@ -206,12 +213,23 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
   }
 
   const resources = resourceParts.join(' ');
-  addObject(
-    pageId,
-    encode(
-      `${pageId} 0 obj\n<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << ${resources} >> /Contents ${contentId} 0 R >>\nendobj\n`
-    )
-  );
+  pageObjects.forEach(({ contentId, pageId }, index) => {
+    const contentBytes = encode(pageContents[index]);
+    addObject(
+      contentId,
+      concatBytes(
+        encode(`${contentId} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`),
+        contentBytes,
+        encode('\nendstream\nendobj\n')
+      )
+    );
+    addObject(
+      pageId,
+      encode(
+        `${pageId} 0 obj\n<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << ${resources} >> /Contents ${contentId} 0 R >>\nendobj\n`
+      )
+    );
+  });
 
   const xrefStart = position;
   const totalObjects = nextId - 1;

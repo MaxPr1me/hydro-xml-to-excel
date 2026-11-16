@@ -3,6 +3,9 @@ panel-checker/dist/
 panel-checker/tsconfig*.tsbuildinfo
 panel-checker/.tmp-tests/
 
+# Local utility data samples (real customer data; never commit)
+Utility Data Sample/
+
 # Logs and OS cruft
 npm-debug.log*
 *.log

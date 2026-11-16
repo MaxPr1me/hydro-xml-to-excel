@@ -14,6 +14,9 @@ interface Props {
 
 const serviceSizes = [60, 70, 80, 100, 125, 150, 200];
 
+// Survives remounts (e.g. back/forward to /results) so each analysis reports its result once.
+const trackedAnalyses = new WeakSet<AnalysisState>();
+
 export default function PanelCalculator({ analysis, onVerdictChange, sectionRef }: Props) {
   const { lang, copy, translateError } = useI18n();
   const [inputs, setInputs] = useState<PanelInputs>({
@@ -101,6 +104,11 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
   }, [verdict, onVerdictChange]);
 
   useEffect(() => {
+    // Wait for the baseline entry so the first settled verdict is reported, not the empty initial render.
+    if (trackedAnalyses.has(analysis) || inputs.existingLoads[0]?.amps !== baseline) {
+      return;
+    }
+    trackedAnalyses.add(analysis);
     const mode = analysis.mode === 'ns-power-smoc' ? 'ns_power' : 'flex';
     const method = manualMode ? 'manual_peak' : 'verified';
     const maxDemand = manualMode && analysis.manualPeak
@@ -114,7 +122,7 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
       maxDemandAmpsRounded: maxDemand ? Math.round(maxDemand / 5) * 5 : undefined,
       upgradeRequired: verdict.status === 'Upgrade'
     });
-  }, [analysis, inputs.mainBreaker, manualMode, verdict]);
+  }, [analysis, baseline, inputs.existingLoads, inputs.mainBreaker, manualMode, verdict]);
 
   const addLoad = (list: 'existingLoads' | 'newLoads') => {
     setInputs((prev) => ({

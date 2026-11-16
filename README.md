@@ -22,26 +22,35 @@ _The UI supports Canadian English and Canadian French with an in-header language
 ## Features
 
 - ⚡️ Drag-and-drop uploader that auto-detects CSV, XLSX, and Green Button XML files, mirrors the Green Button timezone/multiplier rules, and surfaces an amber warning when Excel uploads are truncated to ~100,000 rows for GitHub Pages performance.
-- 🧵 XLSX parsing happens inside a dedicated Web Worker (`src/workers/excelParser.ts`) so large spreadsheets do not freeze the UI; the worker streams the first worksheet through SheetJS, enforces the row cap, and times out after 20 seconds if the browser never responds.
+- 🧵 XLSX parsing happens inside a dedicated Web Worker (`src/workers/excelParser.ts`) so large spreadsheets do not freeze the UI; the worker reads the first worksheet with the bundled SheetJS library, enforces the row cap, and is stopped after 60 seconds if it never responds so the next upload starts fresh.
+- FR : L’analyse XLSX s’effectue dans un Web Worker dédié (`src/workers/excelParser.ts`) afin que les grands classeurs ne bloquent pas l’interface; le worker lit la première feuille avec la bibliothèque SheetJS intégrée, respecte la limite de lignes et est arrêté après 60 secondes sans réponse afin que le téléversement suivant puisse commencer.
 - ✅ Column mapper that validates cadence (15/30/60-minute), enforces a one-year window, and normalizes kWh/kW/Amps to amps using a 240 V
   recommended default.
-- 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable PNG images that mirror the on-screen view.
+- 📈 Plotly.js interactive demand chart with amps/kWh toggles, one-year coverage stats, and exportable JPG images that mirror the on-screen view.
+- FR : Graphique de demande interactif Plotly.js avec bascule ampères/kWh, statistiques sur une année et exportation d’images JPG correspondant à l’affichage.
 - 🧮 Plain-language panel calculator that anchors to the absolute one-year max (×1.25), differentiates continuous vs. non-continuous loads, and lets you stack what-if scenarios.
 - 🧾 Manual entry path that converts a user-supplied peak kWh reading into amps so crews can run the calculator even when no file is available; the UI clearly flags these runs as unverified and disables the graph.
-- 📄 Download-ready PDF summary that embeds the demand profile chart (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout.
-- 🌐 English/French copy (including validation errors, chart controls, and PNG/PDF exports), large tap targets, and tablet-friendly layout for field use.
-- 🔗 Footer license link resolves dynamically for forks (relative LICENSE fallback), and the safety contact uses anti-scrape formatting.
+- 📄 Download-ready PDF summary that embeds the demand profile chart (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout; sections that do not fit on one page continue onto additional pages.
+- FR : Résumé PDF prêt à télécharger qui intègre le graphique de demande (ou un espace réservé sans graphique), met en évidence la conclusion et présente les charges proposées dans une mise en page adaptée aux permis; les sections qui ne tiennent pas sur une page se poursuivent sur les pages suivantes.
+- 🌐 English/French copy (including validation errors, chart controls, and JPG/PDF exports), large tap targets, and tablet-friendly layout for field use.
+- 🛟 If a page fails to render, a bilingual error panel with a reload button replaces the blank screen, and browsers that block local storage (for example strict privacy modes) still load the app; the language choice is simply not remembered.
+- FR : Si une page ne s’affiche pas, un panneau d’erreur bilingue avec un bouton de rechargement remplace l’écran vide. L’application se charge aussi dans les navigateurs qui bloquent le stockage local (par exemple, en mode de confidentialité strict); le choix de langue n’est alors pas mémorisé.
+- 🔗 Footer license link resolves dynamically for forks (it points to `blob/HEAD/LICENSE`, which follows the repository's default branch, with a relative LICENSE fallback), and the safety contact uses anti-scrape formatting.
+- FR : Le lien de licence du pied de page s’adapte aux forks (il pointe vers `blob/HEAD/LICENSE`, qui suit la branche par défaut du dépôt, avec un chemin relatif `LICENSE` en solution de repli); les coordonnées de soutien sont formatées pour limiter le moissonnage automatisé.
 - 🔀 Mode toggle for generic Flexible interval data vs. NS Power SMOC XLSX exports; the SMOC path reads "Interval Period End Timestamp Local" and uses the higher of Max A(a)/Max A(c) per interval.
 
 ## Uploading interval data
 
 - **CSV uploads must stay plain text.** The uploader expects standard comma-separated text (UTF-8 or ASCII). Zipped CSVs, binary Excel exports, or files that were renamed from `.xlsx` to `.csv` will fail because the parser streams the file line-by-line.
-- **XLSX files are parsed in a worker with SheetJS.** Dragging an Excel workbook keeps you offline while the worker reads the first worksheet with a clear header row. The parser scans for timestamp headers (it no longer assumes the first column holds dates) and keeps extra columns intact. For GitHub Pages responsiveness, only the first ~100,000 data rows are processed and the uploader surfaces a truncation warning when that limit is reached. Renaming a CSV to `.xlsx` does not gain any formatting support.
-- **Green Button XML follows the official spec.** The parser keeps the timezone offset, multiplier, and quality flags intact so the mapper receives the raw values your utility provided.
+- **XLSX files are parsed in a worker with SheetJS.** SheetJS is bundled with the app and precached by the service worker, so workbooks are read without contacting a third-party CDN and keep working offline after the first load. The worker reads the first worksheet with a clear header row. The parser scans for timestamp headers (it no longer assumes the first column holds dates) and keeps extra columns intact. For GitHub Pages responsiveness, only the first ~100,000 data rows are processed and the uploader surfaces a truncation warning when that limit is reached. Renaming a CSV to `.xlsx` does not gain any formatting support.
+- **Les fichiers XLSX sont analysés dans un worker avec SheetJS.** SheetJS est intégré à l’application et mis en cache à l’avance par le service worker; les classeurs sont donc lus sans contacter un CDN tiers et restent accessibles hors ligne après le premier chargement. Le worker lit la première feuille avec une ligne d’en-tête claire. L’analyseur repère les en-têtes d’horodatage (il ne suppose plus que la première colonne contient les dates) et conserve les colonnes supplémentaires. Pour assurer la réactivité sur GitHub Pages, seules les quelque 100 000 premières lignes de données sont traitées et l’interface signale toute troncature. Renommer un CSV en `.xlsx` n’ajoute aucune prise en charge du formatage.
+- **Green Button XML follows the official spec.** The parser keeps the timezone offset, multiplier, and quality flags intact so the mapper receives the raw values your utility provided. When a file holds several readings (for example energy delivered to and received from the grid), the parser follows the file's links to the delivered (consumption) stream and prefers the finest interval. Interval start times are read as true UTC instants, as the specification requires, and shown in your browser's time zone. Some utilities export local clock time labelled as UTC; their charts appear shifted by the UTC offset (about 4–5 hours in Eastern and Atlantic Canada), although the readings themselves are unchanged.
+- **Les fichiers XML Green Button suivent la spécification officielle.** L’analyseur conserve le décalage horaire, le multiplicateur et les indicateurs de qualité afin que le mappeur reçoive les valeurs brutes du service public. Si un fichier contient plusieurs séries de relevés (par exemple, l’énergie livrée au réseau et celle reçue), l’analyseur suit les liens du fichier vers la série livrée (consommation) et privilégie l’intervalle le plus fin. Les heures de début d’intervalle sont lues comme de véritables instants UTC, conformément à la spécification, puis affichées dans le fuseau horaire du navigateur. Certains services publics exportent l’heure locale en l’étiquetant UTC; leurs graphiques peuvent donc être décalés de l’équivalent UTC (environ 4 à 5 heures dans l’Est et le Canada atlantique), sans que les relevés changent.
 
 ### Choosing a mode
 
-- **Flexible interval data** accepts CSV, XLSX, and Green Button XML. Timestamp headers are detected by name, and cadence is inferred from the first several dozen valid rows.
+- **Flexible interval data** accepts CSV, XLSX, and Green Button XML. Timestamp headers are detected by name, and cadence is inferred from the first several dozen valid rows. The value column defaults to an energy or demand header in English or French (for example `Usage (KWH)`, `Net Consumption (kWh)`, or `Consommation`) instead of account, meter, or ID columns; you can still change it in the mapper.
+- **Les données d’intervalle flexibles** acceptent les fichiers CSV, XLSX et XML Green Button. Les en-têtes d’horodatage sont détectés par leur nom et la cadence est déduite des premières dizaines de lignes valides. La colonne de valeur privilégie par défaut un en-tête d’énergie ou de demande en anglais ou en français (par exemple `Usage (KWH)`, `Net Consumption (kWh)` ou `Consommation`) plutôt qu’une colonne de compte, de compteur ou d’identifiant; vous pouvez toujours la modifier dans le mappeur.
 - **NS Power SMOC data** expects the Interval Period End Timestamp Local column and Max A(a)/Max A(c) fields on the first worksheet of an XLSX export. Amperage is derived from the highest phase per interval; malformed timestamps or missing Max A columns raise immediate errors.
 
 ## Tech stack
@@ -49,6 +58,8 @@ _The UI supports Canadian English and Canadian French with an in-header language
 - [Vite](https://vitejs.dev/) + [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS](https://tailwindcss.com/) utility styling
 - [Papa Parse](https://www.papaparse.com/) for CSV ingestion
+- [SheetJS Community Edition](https://sheetjs.com/) for XLSX ingestion, installed from the pinned `cdn.sheetjs.com` tarball listed in `package.json` (so `npm install` needs access to that host)
+- [SheetJS Community Edition](https://sheetjs.com/) pour l’importation XLSX, installé à partir de l’archive `cdn.sheetjs.com` épinglée dans `package.json` (donc `npm install` doit pouvoir accéder à cet hôte)
 - [Zod](https://github.com/colinhacks/zod) runtime validation
 - [Plotly](https://plotly.com/javascript/) charts
 - [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) for offline installs
@@ -110,10 +121,21 @@ Then visit `http://localhost:4173/<repo-name>/` (replace `<repo-name>` with your
 The preview server falls back to `index.html` for deep links, so browsing to that prefixed URL mirrors GitHub Pages and confirms
 that icons, the manifest, and bundled JavaScript load from relative paths.
 
-If you publish under a custom domain or keep a non-`main` default branch, set `VITE_REPO_URL=https://github.com/<owner>/<repo>`
-and `VITE_DEFAULT_BRANCH=<branch-name>` before running `npm run build`. The footer License/Licence link is fork-safe: it derives
-`owner/repo` from `*.github.io/<repo>/` when possible, infers a branch from URL paths such as `/<repo>/<branch>/`, then falls
-back to `VITE_DEFAULT_BRANCH` (or `main`). Set `VITE_REPO_URL` and `VITE_DEFAULT_BRANCH` to override this behaviour in forks.
+If you publish under a custom domain, set `VITE_REPO_URL=https://github.com/<owner>/<repo>` before running `npm run build`.
+The footer License/Licence link is fork-safe: it uses `VITE_REPO_URL` when set, otherwise derives `owner/repo` from
+`*.github.io/<repo>/` (or reads the `repository` field in `package.json` once its `OWNER/REPO` placeholder is replaced), then
+links to `<repo-url>/blob/HEAD/LICENSE`. GitHub resolves `HEAD` to the repository's default branch, so no branch setting is
+needed. When no repository can be resolved (for example on `localhost`), the link falls back to a relative `LICENSE` path.
+- FR : Si vous publiez sur un domaine personnalisé, définissez `VITE_REPO_URL=https://github.com/<owner>/<repo>` avant d’exécuter `npm run build`. Le lien Licence du pied de page utilise `VITE_REPO_URL` lorsqu’il est défini; sinon, il déduit `owner/repo` de `*.github.io/<repo>/` (ou lit le champ `repository` de `package.json` une fois l’espace réservé `OWNER/REPO` remplacé), puis pointe vers `<url-du-dépôt>/blob/HEAD/LICENSE`. GitHub résout `HEAD` vers la branche par défaut; aucune variable de branche n’est nécessaire. Si le dépôt ne peut pas être déterminé (par exemple sur `localhost`), le lien utilise le chemin relatif `LICENSE`.
+
+## Content Security Policy / Politique de sécurité du contenu
+
+- EN: `npm run build` adds a Content-Security-Policy `<meta>` tag to `dist/index.html` through a small plugin in `panel-checker/vite.config.ts` (keep `vite.config.js` identical). Inline scripts are allowed by SHA-256 hashes calculated during the build, so editing them in `index.html` needs no manual hash update.
+- FR : `npm run build` ajoute une balise `<meta>` Content-Security-Policy à `dist/index.html` au moyen d’un petit module d’extension dans `panel-checker/vite.config.ts` (garder `vite.config.js` identique). Les scripts intégrés sont autorisés par des empreintes SHA-256 calculées pendant la compilation; les modifier dans `index.html` n’exige donc aucune mise à jour manuelle d’empreinte.
+- EN: The policy only allows the app’s own files plus Google Analytics 4 (`googletagmanager.com`, `google-analytics.com`, `analytics.google.com`). If you add a third-party script, font, image, or API host, or turn on Google Signals or advertising features, add its origin to the policy or the browser will block it.
+- FR : La politique n’autorise que les fichiers de l’application et Google Analytics 4 (`googletagmanager.com`, `google-analytics.com`, `analytics.google.com`). Si vous ajoutez un script, une police, une image ou une API de tiers, ou si vous activez Google Signals ou les fonctions publicitaires, ajoutez son origine à la politique, sinon le navigateur la bloquera.
+- EN: The development server (`npm run dev`) does not apply the policy; test with `npm run build` then `npm run preview` and watch the browser console for Content Security Policy errors. GitHub Pages cannot send HTTP headers, so protections that only work as headers (such as `frame-ancestors`) are not available.
+- FR : Le serveur de développement (`npm run dev`) n’applique pas la politique; testez avec `npm run build` puis `npm run preview` et surveillez la console du navigateur pour repérer les erreurs Content Security Policy. GitHub Pages ne peut pas envoyer d’en-têtes HTTP; les protections qui fonctionnent seulement comme en-têtes (comme `frame-ancestors`) ne sont donc pas disponibles.
 
 
 ## Static SEO notes / Notes SEO statiques

@@ -10,7 +10,42 @@ const CADENCE_TOLERANCE_MINUTES = 1;
 const MS_PER_MINUTE = 60_000;
 const MS_PER_YEAR = 365 * 24 * 60 * MS_PER_MINUTE;
 const ESPI_NS = 'http://naesb.org/espi';
+const ATOM_NS = 'http://www.w3.org/2005/Atom';
+const ESPI_FLOW_FORWARD = 1;
+const ESPI_ACCUMULATION_DELTA_DATA = 4;
 const MAX_EXCEL_ROWS = 100_000;
+
+const VALUE_HEADER_PATTERNS = [
+  /kwh/i,
+  /\bkw\b/i,
+  /\bwh\b/i,
+  /kilowatt/i,
+  /[ée]nergi/i,
+  /usage/i,
+  /consumption/i,
+  /consommation/i,
+  /demand/i,
+  /puissance/i,
+  /\bamp/i,
+  /\bload\b/i
+];
+
+const ID_HEADER_PATTERNS = [
+  /account/i,
+  /compte/i,
+  /\bmeter\b/i,
+  /compteur/i,
+  /number/i,
+  /num[ée]ro/i,
+  /\bid\b/i,
+  /\bno\b/i,
+  /rank/i,
+  /\brang\b/i,
+  /serial/i,
+  /premise/i,
+  /customer/i,
+  /client/i
+];
 
 const TIMESTAMP_HEADER_PATTERNS = [
   /timestamp/i,
@@ -60,7 +95,10 @@ export function parseCsv(text: string): CsvPreview {
 
   const rows: Record<string, string | undefined>[] = [];
   parsed.data.forEach((row) => {
-    const safeRow = rowSchema.parse(row);
+    // Papa collects values beyond the header row (e.g. trailing commas) under __parsed_extra; they have no column to map to.
+    const fields: Record<string, unknown> = { ...row };
+    delete fields.__parsed_extra;
+    const safeRow = rowSchema.parse(fields);
     rows.push(safeRow);
   });
 
@@ -350,6 +388,23 @@ export function guessValueColumn(preview: CsvPreview, timestampColumn?: string):
     return numericCount;
   });
 
+  // Prefer energy/demand headers, then skip identifier columns (account or meter numbers are numeric too).
+  const pickBest = (eligible: (column: string) => boolean): string | null => {
+    let bestIndex = -1;
+    preview.columns.forEach((column, index) => {
+      if (counts[index] > 0 && eligible(column) && (bestIndex < 0 || counts[index] > counts[bestIndex])) {
+        bestIndex = index;
+      }
+    });
+    return bestIndex >= 0 ? preview.columns[bestIndex] : null;
+  };
+  const preferred =
+    pickBest((column) => VALUE_HEADER_PATTERNS.some((pattern) => pattern.test(column))) ??
+    pickBest((column) => !ID_HEADER_PATTERNS.some((pattern) => pattern.test(column)));
+  if (preferred) {
+    return preferred;
+  }
+
   const maxCount = Math.max(...counts);
   if (maxCount === 0) {
     const fallback = preview.columns.find((column) => column !== timestampColumn);
@@ -359,65 +414,202 @@ export function guessValueColumn(preview: CsvPreview, timestampColumn?: string):
   return index >= 0 ? preview.columns[index] : null;
 }
 
+export interface GreenButtonReading {
+  /** Interval start in epoch seconds (UTC), as stored in the file. */
+  start: number;
+  value: number;
+}
+
+export interface GreenButtonReadingType {
+  flowDirection: number | null;
+  accumulationBehaviour: number | null;
+  intervalLength: number | null;
+  powerOfTenMultiplier: number | null;
+}
+
+export interface GreenButtonStream {
+  readingType: GreenButtonReadingType;
+  readings: GreenButtonReading[];
+}
+
+export interface GreenButtonFeed {
+  tzOffsetSeconds: number;
+  /** MeterReading streams resolved through their Atom links to a ReadingType. */
+  streams: GreenButtonStream[];
+  /** Every IntervalReading in document order; used when no delivered interval stream can be identified. */
+  allReadings: GreenButtonReading[];
+  /** First powerOfTenMultiplier in the document; paired with allReadings. */
+  firstMultiplier: number;
+}
+
+function espiNumber(parent: Element | Document, tag: string): number | null {
+  const text = parent.getElementsByTagNameNS(ESPI_NS, tag)[0]?.textContent?.trim();
+  if (!text) {
+    return null;
+  }
+  const value = Number(text);
+  return Number.isFinite(value) ? value : null;
+}
+
+function readIntervalReadings(parent: Element | Document): GreenButtonReading[] {
+  return Array.from(parent.getElementsByTagNameNS(ESPI_NS, 'IntervalReading')).map((node) => ({
+    start: Number(node.getElementsByTagNameNS(ESPI_NS, 'start')[0]?.textContent ?? ''),
+    value: Number(node.getElementsByTagNameNS(ESPI_NS, 'value')[0]?.textContent ?? '')
+  }));
+}
+
+function readingTypeKey(href: string): string | null {
+  return href.match(/\/ReadingType\/[^/?#]+/)?.[0] ?? null;
+}
+
+// IntervalBlock hrefs (".../MeterReading/{id}/IntervalBlock[/{id}]") reduce to the same key as their MeterReading.
+function meterReadingKey(href: string): string | null {
+  return href.match(/(?:\/UsagePoint\/[^/?#]+)?\/MeterReading\/[^/?#]+/)?.[0] ?? null;
+}
+
+function readGreenButtonFeed(doc: Document): GreenButtonFeed {
+  const readingTypes = new Map<string, GreenButtonReadingType>();
+  const meterReadingTypes = new Map<string, string>();
+  const meterReadings = new Map<string, GreenButtonReading[]>();
+
+  Array.from(doc.getElementsByTagNameNS(ATOM_NS, 'entry')).forEach((entry) => {
+    const links = Array.from(entry.getElementsByTagNameNS(ATOM_NS, 'link')).map((link) => ({
+      rel: link.getAttribute('rel') ?? '',
+      href: link.getAttribute('href') ?? ''
+    }));
+    const selfHref = links.find((link) => link.rel === 'self')?.href ?? '';
+
+    const readingType = entry.getElementsByTagNameNS(ESPI_NS, 'ReadingType')[0];
+    if (readingType) {
+      const key = readingTypeKey(selfHref);
+      if (key) {
+        readingTypes.set(key, {
+          flowDirection: espiNumber(readingType, 'flowDirection'),
+          accumulationBehaviour: espiNumber(readingType, 'accumulationBehaviour'),
+          intervalLength: espiNumber(readingType, 'intervalLength'),
+          powerOfTenMultiplier: espiNumber(readingType, 'powerOfTenMultiplier')
+        });
+      }
+      return;
+    }
+
+    if (entry.getElementsByTagNameNS(ESPI_NS, 'MeterReading')[0]) {
+      const meterKey = meterReadingKey(selfHref);
+      const typeKey = links
+        .filter((link) => link.rel === 'related')
+        .map((link) => readingTypeKey(link.href))
+        .find((key): key is string => Boolean(key));
+      if (meterKey && typeKey) {
+        meterReadingTypes.set(meterKey, typeKey);
+      }
+      return;
+    }
+
+    if (entry.getElementsByTagNameNS(ESPI_NS, 'IntervalBlock')[0]) {
+      const upHref = links.find((link) => link.rel === 'up')?.href ?? '';
+      const meterKey = meterReadingKey(upHref) ?? meterReadingKey(selfHref);
+      if (!meterKey) {
+        return;
+      }
+      const list = meterReadings.get(meterKey) ?? [];
+      readIntervalReadings(entry).forEach((reading) => list.push(reading));
+      meterReadings.set(meterKey, list);
+    }
+  });
+
+  const streams: GreenButtonStream[] = [];
+  meterReadingTypes.forEach((typeKey, meterKey) => {
+    const readingType = readingTypes.get(typeKey);
+    const readings = meterReadings.get(meterKey);
+    if (readingType && readings?.length) {
+      streams.push({ readingType, readings });
+    }
+  });
+
+  const tzOffsetSeconds = espiNumber(doc, 'tzOffset') ?? 0;
+  return {
+    tzOffsetSeconds,
+    streams,
+    allReadings: readIntervalReadings(doc),
+    firstMultiplier: espiNumber(doc, 'powerOfTenMultiplier') ?? 0
+  };
+}
+
+// Feeds can mix delivered, net, received (solar) and cumulative-register streams; only delivered interval
+// data (flowDirection 1, accumulationBehaviour 4 "deltaData") is a household's demand. The finest interval
+// wins, then the stream with the most readings.
+function selectGreenButtonReadings(feed: GreenButtonFeed): { readings: GreenButtonReading[]; multiplier: number } {
+  const candidates = feed.streams
+    .filter(
+      (stream) =>
+        stream.readingType.flowDirection === ESPI_FLOW_FORWARD &&
+        stream.readingType.accumulationBehaviour === ESPI_ACCUMULATION_DELTA_DATA
+    )
+    .sort(
+      (a, b) =>
+        (a.readingType.intervalLength ?? Number.POSITIVE_INFINITY) -
+          (b.readingType.intervalLength ?? Number.POSITIVE_INFINITY) || b.readings.length - a.readings.length
+    );
+  const chosen = candidates[0];
+  if (!chosen) {
+    return { readings: feed.allReadings, multiplier: feed.firstMultiplier };
+  }
+  return { readings: chosen.readings, multiplier: chosen.readingType.powerOfTenMultiplier ?? 0 };
+}
+
 export function parseGreenButtonXml(text: string): CsvPreview {
-  const doc = parseXml(text);
-  const readings = Array.from(doc.getElementsByTagNameNS(ESPI_NS, 'IntervalReading'));
-  if (!readings.length) {
+  return buildGreenButtonPreview(readGreenButtonFeed(parseXml(text)));
+}
+
+export function buildGreenButtonPreview(feed: GreenButtonFeed): CsvPreview {
+  if (!feed.allReadings.length) {
     throw new Error('No valid data found in the XML file.');
   }
 
-  const tzOffsetSeconds = Number(doc.getElementsByTagNameNS(ESPI_NS, 'tzOffset')[0]?.textContent ?? '0');
-  const multiplierValue = Number(doc.getElementsByTagNameNS(ESPI_NS, 'powerOfTenMultiplier')[0]?.textContent ?? '0');
-  const scaleFactor = multiplierValue === -6 ? 10 ** multiplierValue : (10 ** multiplierValue) / 1000;
+  const { readings, multiplier } = selectGreenButtonReadings(feed);
+  const scaleFactor = multiplier === -6 ? 10 ** multiplier : (10 ** multiplier) / 1000;
 
-  const seenTimestamps = new Set<number>();
-  const samples: Array<{ timestamp: Date; rawValue: number }> = [];
+  const seenStarts = new Set<number>();
+  const samples: Array<{ startSeconds: number; rawValue: number }> = [];
 
-  readings.forEach((node) => {
-    const startSeconds = Number(node.getElementsByTagNameNS(ESPI_NS, 'start')[0]?.textContent ?? '');
-    const rawValue = Number(node.getElementsByTagNameNS(ESPI_NS, 'value')[0]?.textContent ?? '');
-    if (!Number.isFinite(startSeconds) || !Number.isFinite(rawValue)) {
+  readings.forEach(({ start, value }) => {
+    if (!Number.isFinite(start) || !Number.isFinite(value) || seenStarts.has(start)) {
       return;
     }
-    const localizedSeconds = startSeconds + tzOffsetSeconds;
-    const timestampMs = localizedSeconds * 1000;
-    if (seenTimestamps.has(timestampMs)) {
-      return;
-    }
-    seenTimestamps.add(timestampMs);
-    samples.push({ timestamp: new Date(timestampMs), rawValue });
+    seenStarts.add(start);
+    samples.push({ startSeconds: start, rawValue: value });
   });
 
   if (!samples.length) {
     throw new Error('No valid data found in the XML file.');
   }
 
-  samples.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  samples.sort((a, b) => a.startSeconds - b.startSeconds);
 
-  const coverageDays =
-    (samples[samples.length - 1].timestamp.getTime() - samples[0].timestamp.getTime()) / (1000 * 60 * 60 * 24);
-  if (coverageDays < 365) {
+  const deltaSeconds = samples.length > 1 ? samples[1].startSeconds - samples[0].startSeconds : 60 * 60;
+
+  // Same tolerance as enforceYearWindow: a full year of intervals spans one interval less than 365 days.
+  const coverageMs = (samples[samples.length - 1].startSeconds - samples[0].startSeconds) * 1000;
+  if (coverageMs < MS_PER_YEAR - deltaSeconds * 1000) {
     throw new Error('Not enough data for analysis. At least one year of data is required.');
   }
 
-  const deltaSeconds =
-    samples.length > 1
-      ? (samples[1].timestamp.getTime() - samples[0].timestamp.getTime()) / 1000
-      : 60 * 60;
   if (deltaSeconds > 60 * 60) {
     throw new Error(`Data timestep is larger than 1 hour: ${Math.round(deltaSeconds / 60)} minutes.`);
   }
 
+  // Timestamps stay true UTC instants; tzOffset is only used to keep hourly rows on local clock hours
+  // (needed for half-hour zones such as Newfoundland).
+  const isLocalHourStart = (startSeconds: number) =>
+    (((startSeconds + feed.tzOffsetSeconds) % 3600) + 3600) % 3600 === 0;
   const filteredSamples =
-    deltaSeconds === 60 * 60
-      ? samples.filter((sample) => sample.timestamp.getUTCMinutes() === 0 && sample.timestamp.getUTCSeconds() === 0)
-      : samples;
+    deltaSeconds === 60 * 60 ? samples.filter((sample) => isLocalHourStart(sample.startSeconds)) : samples;
 
   const rows = filteredSamples.map((entry) => {
     const kwh = entry.rawValue * scaleFactor;
     const amps = (kwh / (deltaSeconds / 3600) * 1000) / 240;
     return {
-      timestamp: entry.timestamp.toISOString(),
+      timestamp: new Date(entry.startSeconds * 1000).toISOString(),
       energy_kwh: kwh.toFixed(4),
       amps: amps.toFixed(2)
     };
@@ -470,7 +662,7 @@ export function mapRecords(preview: CsvPreview, mapping: ColumnMapping): Mapping
 
     const timestamp = new Date(timestampRaw);
     const value = Number(valueRaw);
-    if (!Number.isFinite(value)) {
+    if (Number.isNaN(timestamp.getTime()) || !Number.isFinite(value)) {
       return;
     }
 
@@ -785,6 +977,16 @@ export function computeDemandStats(records: IntervalDatum[]) {
     start: records[0].timestamp,
     end: records[records.length - 1].timestamp
   };
+}
+
+/** Display-only variant: returns null instead of throwing when cadence validation fails. */
+export function tryComputeDemandStats(records: IntervalDatum[]) {
+  try {
+    return computeDemandStats(records);
+  } catch (error) {
+    console.warn('Demand statistics unavailable', error);
+    return null;
+  }
 }
 
 function percentile(values: number[], pct: number) {

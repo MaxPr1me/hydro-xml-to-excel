@@ -1,7 +1,30 @@
 import assert from 'assert';
 import { describe, it } from 'node:test';
-import { guessTimestampColumn, inferCadenceMinutes, parseNsPowerSmocRows, resolveKnownXmlMapping } from '../src/lib/parse.js';
-import type { CsvPreview } from '../src/types.js';
+import {
+  buildGreenButtonPreview,
+  computeDemandStats,
+  guessTimestampColumn,
+  guessValueColumn,
+  inferCadenceMinutes,
+  mapRecords,
+  parseCsv,
+  parseNsPowerSmocRows,
+  resolveKnownXmlMapping,
+  tryComputeDemandStats,
+  type GreenButtonFeed,
+  type GreenButtonReading
+} from '../src/lib/parse.js';
+import type { CsvPreview, IntervalDatum } from '../src/types.js';
+
+const HOURS_PER_YEAR = 365 * 24;
+
+function hourlyReadings(startSeconds: number, count: number, value: number): GreenButtonReading[] {
+  return Array.from({ length: count }, (_, index) => ({ start: startSeconds + index * 3600, value }));
+}
+
+function peakAmps(preview: CsvPreview): number {
+  return preview.rows.reduce((max, row) => Math.max(max, Number(row.amps)), 0);
+}
 
 function formatLocalTimestamp(date: Date): string {
   const year = date.getFullYear();
@@ -59,6 +82,104 @@ describe('timestamp detection', () => {
   });
 });
 
+describe('value column detection', () => {
+  it('prefers energy headers over numeric account or meter numbers', () => {
+    const preview: CsvPreview = {
+      columns: ['Account Number', 'Interval Start Date/Time', 'Net Consumption (kWh)'],
+      rows: [
+        { 'Account Number': '1234567', 'Interval Start Date/Time': '2024-01-01 00:00', 'Net Consumption (kWh)': '0.52' },
+        { 'Account Number': '1234567', 'Interval Start Date/Time': '2024-01-01 01:00', 'Net Consumption (kWh)': '' }
+      ]
+    };
+    assert.equal(guessValueColumn(preview, 'Interval Start Date/Time'), 'Net Consumption (kWh)');
+  });
+
+  it('skips identifier columns when no energy header exists', () => {
+    const preview: CsvPreview = {
+      columns: ['Meter Number', 'Timestamp', 'Reading'],
+      rows: [
+        { 'Meter Number': '998877', Timestamp: '2024-01-01 00:00', Reading: '1.1' },
+        { 'Meter Number': '998877', Timestamp: '2024-01-01 01:00', Reading: '0.9' }
+      ]
+    };
+    assert.equal(guessValueColumn(preview, 'Timestamp'), 'Reading');
+  });
+});
+
+describe('CSV parsing', () => {
+  it('ignores extra trailing fields beyond the header row', () => {
+    const preview = parseCsv('timestamp,kWh\n2024-01-01 00:00,0.5,\n2024-01-01 01:00,0.7,,\n');
+    assert.deepEqual(preview.columns, ['timestamp', 'kWh']);
+    assert.equal(preview.rows[1].kWh, '0.7');
+    assert.ok(!('__parsed_extra' in preview.rows[0]));
+  });
+});
+
+describe('record mapping', () => {
+  it('skips rows with invalid timestamps such as a trailing totals row', () => {
+    const start = new Date('2024-01-01T00:00:00Z').getTime();
+    const rows = Array.from({ length: HOURS_PER_YEAR }, (_, index) => ({
+      time: new Date(start + index * 3_600_000).toISOString(),
+      kwh: '1'
+    }));
+    rows.push({ time: 'Total', kwh: String(HOURS_PER_YEAR) });
+
+    const result = mapRecords({ columns: ['time', 'kwh'], rows }, { timeColumn: 'time', valueColumn: 'kwh', unit: 'kWh', voltage: 240 });
+    assert.equal(result.data.length, HOURS_PER_YEAR);
+    assert.ok(result.data.every((item) => !Number.isNaN(item.timestamp.getTime())));
+    assert.equal(result.cadenceMinutes, 60);
+  });
+});
+
+describe('Green Button feeds', () => {
+  const start = Date.UTC(2024, 0, 1, 5) / 1000;
+  const delivered = { flowDirection: 1, accumulationBehaviour: 4, intervalLength: 3600, powerOfTenMultiplier: -3 };
+
+  it('accepts exactly one year of hourly readings', () => {
+    const readings = hourlyReadings(start, HOURS_PER_YEAR, 1_000_000);
+    const feed: GreenButtonFeed = { tzOffsetSeconds: -18000, streams: [{ readingType: delivered, readings }], allReadings: readings, firstMultiplier: -3 };
+    assert.equal(buildGreenButtonPreview(feed).rows.length, HOURS_PER_YEAR);
+  });
+
+  it('uses only the delivered interval stream and its multiplier', () => {
+    const register = hourlyReadings(start, HOURS_PER_YEAR, 95_000_000);
+    const net = hourlyReadings(start, HOURS_PER_YEAR, 500_000);
+    const forward = hourlyReadings(start, HOURS_PER_YEAR, 2_000_000);
+    const feed: GreenButtonFeed = {
+      tzOffsetSeconds: -18000,
+      streams: [
+        { readingType: { flowDirection: 1, accumulationBehaviour: 1, intervalLength: 86400, powerOfTenMultiplier: 0 }, readings: register },
+        { readingType: { ...delivered, flowDirection: 4 }, readings: net },
+        { readingType: delivered, readings: forward }
+      ],
+      allReadings: [...register, ...net, ...forward],
+      firstMultiplier: 0
+    };
+
+    const preview = buildGreenButtonPreview(feed);
+    assert.equal(preview.rows.length, HOURS_PER_YEAR);
+    // 2,000,000 x 10^-3 Wh = 2 kWh per hour -> 2 kW / 240 V = 8.33 A
+    assert.equal(peakAmps(preview), 8.33);
+  });
+
+  it('falls back to every reading when no delivered interval stream is linked', () => {
+    const readings = hourlyReadings(start, HOURS_PER_YEAR, 1_200_000);
+    const feed: GreenButtonFeed = { tzOffsetSeconds: -18000, streams: [], allReadings: readings, firstMultiplier: -3 };
+    assert.equal(peakAmps(buildGreenButtonPreview(feed)), 5);
+  });
+
+  it('keeps true UTC instants and aligns hourly rows to local half-hour zones', () => {
+    // Newfoundland (UTC-3:30): local midnight is 03:30 UTC.
+    const nlStart = Date.UTC(2024, 0, 1, 3, 30) / 1000;
+    const readings = hourlyReadings(nlStart, HOURS_PER_YEAR, 1_000_000);
+    const feed: GreenButtonFeed = { tzOffsetSeconds: -12600, streams: [{ readingType: delivered, readings }], allReadings: readings, firstMultiplier: -3 };
+
+    const preview = buildGreenButtonPreview(feed);
+    assert.equal(preview.rows.length, HOURS_PER_YEAR);
+    assert.equal(preview.rows[0].timestamp, '2024-01-01T03:30:00.000Z');
+  });
+});
+
 describe('XML auto-mapping detection', () => {
   it('returns a mapping for canonical Green Button previews', () => {
     const preview: CsvPreview = {
@@ -95,6 +216,22 @@ describe('cadence inference', () => {
     );
     const cadence = inferCadenceMinutes(timestamps);
     assert.equal(cadence, 15);
+  });
+});
+
+describe('demand statistics for display', () => {
+  it('returns null instead of throwing when cadence cannot be validated', () => {
+    const records: IntervalDatum[] = [0, 7, 20, 26].map((offset) => ({
+      timestamp: new Date(Date.UTC(2024, 0, 1, 0, offset)),
+      value: 1,
+      unit: 'kWh',
+      amps: 10,
+      voltage: 240,
+      intervalMinutes: 15
+    }));
+
+    assert.throws(() => computeDemandStats(records));
+    assert.equal(tryComputeDemandStats(records), null);
   });
 });
 

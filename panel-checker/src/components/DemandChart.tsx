@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'rea
 import Plotly from 'plotly.js-dist-min';
 import type { Config, Data, Layout, ModeBarDefaultButtons } from 'plotly.js';
 import { IntervalDatum } from '../types';
-import { computeDemandStats } from '../lib/parse';
+import { tryComputeDemandStats } from '../lib/parse';
 import { convertToKwh } from '../lib/units';
 import { renderDemandProfileSnapshot } from '../lib/snapshots';
 import { trackAnalysisError, trackSummaryDownload } from '../analytics';
@@ -20,7 +20,7 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
   const ref = chartRef ?? fallbackRef;
   const [metric, setMetric] = useState<Metric>('amps');
   const [exportError, setExportError] = useState<string | null>(null);
-  const stats = useMemo(() => computeDemandStats(data), [data]);
+  const stats = useMemo(() => tryComputeDemandStats(data), [data]);
 
   const chartDefinition = useMemo(() => {
     if (!data.length) return null;
@@ -64,14 +64,14 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
     try {
       setExportError(null);
       const snapshot = await renderDemandProfileSnapshot({ chartElement: ref.current, data, metric, labels: buildSnapshotLabels(copy) });
-      trackSummaryDownload({ format: 'png', method: 'verified', hasData: true });
+      trackSummaryDownload({ format: 'jpg', method: 'verified', hasData: true });
       const link = document.createElement('a');
       link.href = snapshot.dataUrl;
-      link.download = `leeps-demand-profile-${metric}.png`;
+      link.download = `leeps-demand-profile-${metric}.jpg`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     } catch (error) {
       setExportError((error as Error).message || 'Unable to export the demand profile.');
-      trackAnalysisError({ stage: 'pdf', errorCode: 'PNG_EXPORT_FAILED' });
+      trackAnalysisError({ stage: 'pdf', errorCode: 'JPG_EXPORT_FAILED' });
     }
   };
 

@@ -1,5 +1,5 @@
 import Plotly from 'plotly.js-dist-min';
-import { computeDemandStats } from './parse';
+import { tryComputeDemandStats } from './parse';
 import { dataUrlToBytes } from './pdf';
 import type { IntervalDatum } from '../types';
 
@@ -50,7 +50,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 export async function renderDemandProfileSnapshot(options: SnapshotOptions): Promise<SnapshotResult> {
-  const stats = computeDemandStats(options.data);
+  const stats = tryComputeDemandStats(options.data);
   const chartUrl = (await Plotly.toImage(options.chartElement, {
     format: 'png',
     width: 1400,

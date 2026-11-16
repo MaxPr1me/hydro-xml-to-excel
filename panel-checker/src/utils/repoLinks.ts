@@ -39,20 +39,6 @@ function inferRepoUrlFromHost() {
   return undefined;
 }
 
-function inferBranchFromPath() {
-  const segments = window.location.pathname.split('/').filter(Boolean);
-  if (segments.length < 2) {
-    return undefined;
-  }
-
-  const candidate = segments[1];
-  if (!candidate || candidate.includes('.') || candidate.toLowerCase() === 'assets') {
-    return undefined;
-  }
-
-  return candidate;
-}
-
 export function resolveRepoUrl() {
   const envRepoUrl = normalizeRepoUrl(import.meta.env.VITE_REPO_URL?.trim());
   if (envRepoUrl) {
@@ -67,14 +53,11 @@ export function resolveRepoUrl() {
   return DEFAULT_REPO_URL;
 }
 
-export function resolveDefaultBranch() {
-  return inferBranchFromPath() || import.meta.env.VITE_DEFAULT_BRANCH?.trim() || 'main';
-}
-
 export function buildLicenseUrl() {
   const repoUrl = resolveRepoUrl();
   if (!repoUrl) {
     return 'LICENSE';
   }
-  return `${repoUrl}/blob/${resolveDefaultBranch()}/LICENSE`;
+  // GitHub resolves HEAD to the repository's default branch, so forks need no branch configuration.
+  return `${repoUrl}/blob/HEAD/LICENSE`;
 }

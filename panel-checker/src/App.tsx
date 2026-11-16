@@ -7,13 +7,31 @@ import { I18nContext, Language, localizeError, translations } from './content/i1
 import { initAnalytics, trackToolLoaded } from './analytics';
 import { buildLicenseUrl } from './utils/repoLinks';
 import { applySeo } from './lib/seo';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const LANG_STORAGE_KEY = 'spark-lang';
+
+// Storage can throw when blocked (privacy modes, disabled site data); language persistence is optional.
+function readStoredLanguage() {
+  try {
+    return localStorage.getItem(LANG_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeLanguage(lang: Language) {
+  try {
+    localStorage.setItem(LANG_STORAGE_KEY, lang);
+  } catch {
+    // Ignore: the ?lang= query parameter still carries the choice.
+  }
+}
 
 export default function App() {
   const [analysis, setAnalysis] = useState<AnalysisState>({ source: 'none', data: [] });
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialLang = (searchParams.get('lang') as Language) || (localStorage.getItem(LANG_STORAGE_KEY) as Language) || 'en';
+  const initialLang = (searchParams.get('lang') as Language) || (readStoredLanguage() as Language) || 'en';
   const [lang, setLang] = useState<Language>(initialLang === 'fr' ? 'fr' : 'en');
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,7 +50,7 @@ export default function App() {
   }, [lang, location.pathname]);
 
   useEffect(() => {
-    localStorage.setItem(LANG_STORAGE_KEY, lang);
+    storeLanguage(lang);
     const next = new URLSearchParams(searchParams);
     next.set('lang', lang);
     setSearchParams(next, { replace: true });
@@ -111,11 +129,13 @@ export default function App() {
           </div>
         </header>
 
-        <Routes>
-          <Route path="/" element={<Home onAnalysisReady={handleAnalysisReady} />} />
-          <Route path="/results" element={<Results analysis={analysis} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <ErrorBoundary key={location.pathname} title={copy.crash.title} body={copy.crash.body} reloadLabel={copy.crash.reload}>
+          <Routes>
+            <Route path="/" element={<Home onAnalysisReady={handleAnalysisReady} />} />
+            <Route path="/results" element={<Results analysis={analysis} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ErrorBoundary>
 
         <footer className="bg-[#0F2941] text-white">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-xs">
