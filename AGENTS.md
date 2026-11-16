@@ -32,6 +32,14 @@ Scope: entire repository.
 - EN: Never take shortcuts or make assumptions without explicitly noting them after approval. Every shortcut, workaround, or assumption must be listed in the plan and in the final summary so the maintainer can correct it.
 - FR : Ne jamais prendre de raccourcis ni faire de suppositions sans les signaler explicitement après l’approbation. Chaque raccourci, contournement ou supposition doit figurer dans le plan et dans le résumé final afin que le responsable puisse le corriger.
 
+## Fork compatibility / Compatibilité avec les dépôts dérivés
+
+- EN: This codebase is forked and later updated downstream at https://canmet-energy.github.io/leep-spark-tool/, and every change must work there unchanged. Keep code as dynamic as possible: derive base paths, repository URLs, branches, hosts, and org/user names at build or run time (relative URLs, `import.meta.env`, `window.location`) instead of hard-coding values tied to this repository or its GitHub Pages host.
+- FR : Ce code est dérivé (fork) puis mis à jour en aval à https://canmet-energy.github.io/leep-spark-tool/, et chaque modification doit y fonctionner sans changement. Garder le code aussi dynamique que possible : déterminer les chemins de base, les URL du dépôt, les branches, les hôtes et les noms d’organisation ou d’utilisateur au moment de la compilation ou de l’exécution (URL relatives, `import.meta.env`, `window.location`) plutôt que de coder en dur des valeurs propres à ce dépôt ou à son hôte GitHub Pages.
+
+- EN: If a value cannot be made dynamic, ask the maintainer first and call it out explicitly in the final summary.
+- FR : Si une valeur ne peut pas être rendue dynamique, consulter d’abord le responsable et la signaler explicitement dans le résumé final.
+
 ## Self-update policy
 
 After every major change to build tooling, hosting, or folder structure, append a bullet to the change log below describing what
@@ -50,6 +58,7 @@ changed and why. This keeps future agents oriented.
 - 2026-02-13 – Added static bilingual SEO architecture (meta/JSON-LD/canonical+hrelang), hidden crawlable FAQ copy, and root robots/sitemap guidance for GitHub Pages + Search Console.
 - 2026-11-16 – Fixed mobile install: removed duplicate static `public/manifest.json` (it shadowed the plugin manifest), added PNG/maskable/apple-touch icons, and synced `vite.config.js` (loaded before `.ts`) with `vite.config.ts`.
 - 2026-11-16 – Added bilingual decision-making policy (no assumptions, ask before choosing paths, disclose shortcuts) and changed panel calculator defaults (breaker loading off except NS SMOC at 80%; adjustment factor on at 125%).
+- 2026-11-16 – Added bilingual fork-compatibility policy: code must stay dynamic because it is forked and updated downstream at https://canmet-energy.github.io/leep-spark-tool/.
 
 ## Tasks
 
