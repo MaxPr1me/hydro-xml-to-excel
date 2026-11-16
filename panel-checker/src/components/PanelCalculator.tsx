@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid';
 import { calculateVerdict, diversifiedLoad } from '../lib/calc';
 import { AnalysisState, IntervalDatum, LoadEntry, PanelInputs, PanelVerdict } from '../types';
 import InfoBubble from './InfoBubble';
-import { useI18n } from '../content/i18n';
+import { relabelDefault, useI18n } from '../content/i18n';
 import { trackAnalysisResult } from '../analytics';
 
 interface Props {
@@ -15,7 +15,7 @@ interface Props {
 const serviceSizes = [60, 70, 80, 100, 125, 150, 200];
 
 export default function PanelCalculator({ analysis, onVerdictChange, sectionRef }: Props) {
-  const { copy, translateError } = useI18n();
+  const { lang, copy, translateError } = useI18n();
   const [inputs, setInputs] = useState<PanelInputs>({
     serviceRating: 100,
     mainBreaker: 100,
@@ -75,6 +75,24 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
       existingAdjustmentPercent: 125
     }));
   }, [analysis.mode, resetKey]);
+
+  useEffect(() => {
+    setInputs((prev) => {
+      const relabel = (items: LoadEntry[]) => {
+        let changed = false;
+        const next = items.map((item) => {
+          const name = relabelDefault(item.name, lang);
+          if (name === item.name) return item;
+          changed = true;
+          return { ...item, name };
+        });
+        return changed ? next : items;
+      };
+      const existingLoads = relabel(prev.existingLoads);
+      const newLoads = relabel(prev.newLoads);
+      return existingLoads === prev.existingLoads && newLoads === prev.newLoads ? prev : { ...prev, existingLoads, newLoads };
+    });
+  }, [lang]);
 
   const verdict = useMemo<PanelVerdict>(() => calculateVerdict(inputs, baseline), [inputs, baseline]);
 
@@ -266,8 +284,8 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
           }
           footerText={
             inputs.existingAdjustmentEnabled
-              ? `${copy.calculator.diversifiedTotal}: ${totalExisting.toFixed(1)} A (${copy.calculator.adjustedTo} ${adjustedExisting.toFixed(1)} A)`
-              : `${copy.calculator.diversifiedTotal}: ${totalExisting.toFixed(1)} A`
+              ? `${copy.calculator.diversifiedTotal}${copy.colon}${totalExisting.toFixed(1)} A (${copy.calculator.adjustedTo} ${adjustedExisting.toFixed(1)} A)`
+              : `${copy.calculator.diversifiedTotal}${copy.colon}${totalExisting.toFixed(1)} A`
           }
         />
 
@@ -286,12 +304,12 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
         <p className="text-2xl font-bold text-slate-900">{verdict.availableMargin.toFixed(1)} A</p>
         <p>{translateError(verdict.message)} {copy.calculator.alwaysConfirm}</p>
         <p className="mt-2 text-slate-600">
-          {copy.calculator.effectiveCapacity}: {effectiveBreaker.toFixed(1)} A (capped by {limitingBreaker} A service/breaker) at{' '}
-          {inputs.breakerLoadingEnabled ? `${inputs.breakerLoadingPercent}%` : '100%'}.
+          {copy.calculator.effectiveCapacity}{copy.colon}
+          {copy.calculator.capacityDetail(effectiveBreaker.toFixed(1), limitingBreaker, inputs.breakerLoadingEnabled ? inputs.breakerLoadingPercent : 100)}
         </p>
         <p className="text-slate-600">
-          {copy.calculator.existingLoad} {inputs.existingAdjustmentEnabled ? copy.calculator.afterAdjustment : copy.calculator.entered}: {adjustedExisting.toFixed(1)} A ·
-          {copy.calculator.additions}: {totalNew.toFixed(1)} A.
+          {copy.calculator.existingLoad} {inputs.existingAdjustmentEnabled ? copy.calculator.afterAdjustment : copy.calculator.entered}{copy.colon}{adjustedExisting.toFixed(1)} A ·{' '}
+          {copy.calculator.additions}{copy.colon}{totalNew.toFixed(1)} A.
         </p>
       </div>
     </section>
@@ -384,7 +402,7 @@ function LoadList({ title, items, onAdd, onRemove, onChange, total, lockFirst, h
         ))}
       </div>
 
-      <p className="text-xs uppercase tracking-wide text-slate-500">{footerText ?? `${copy.calculator.diversifiedTotal}: ${total.toFixed(1)} A`}</p>
+      <p className="text-xs uppercase tracking-wide text-slate-500">{footerText ?? `${copy.calculator.diversifiedTotal}${copy.colon}${total.toFixed(1)} A`}</p>
     </div>
   );
 }

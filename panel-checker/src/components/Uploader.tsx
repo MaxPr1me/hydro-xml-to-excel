@@ -115,13 +115,13 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
       if (!format) {
         const message = 'Upload CSV, XLSX, or Green Button XML files.';
         trackAnalysisError({ stage: 'upload', errorCode: 'UNSUPPORTED_EXTENSION' });
-        setError(translateError(message));
+        setError(message);
         return;
       }
       if (mode === 'ns-power-smoc' && format !== 'excel') {
         const message = 'NS Power SMOC uploads must be Excel workbooks (.xlsx).';
         trackAnalysisError({ stage: 'upload', errorCode: 'INVALID_MODE_FILETYPE' });
-        setError(translateError(message));
+        setError(message);
         return;
       }
       trackFileUpload({ fileType: toFileType(format), isSample: false, approxSizeKb: Math.round(file.size / 1024), mode: toAnalyticsMode(mode) });
@@ -143,23 +143,23 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
             setStatusMessage('Recognized XML format — skipping manual mapping.');
             onParsedData(mapped);
           } catch (err) {
-            setError(translateError((err as Error).message || 'We could not auto-map the XML file. Map the columns manually to continue.'));
+            setError((err as Error).message || 'We could not auto-map the XML file. Map the columns manually to continue.');
             onPreview(preview);
           }
         } else {
-          setError(translateError('XML parsed, but we could not detect the timestamp and kWh fields. Map them manually to continue.'));
+          setError('XML parsed, but we could not detect the timestamp and kWh fields. Map them manually to continue.');
           onPreview(preview);
         }
       }
     } catch (err) {
       const message = (err as Error).message || 'Unable to parse the file.';
-      setError(translateError(message));
+      setError(message);
       trackAnalysisError({ stage: 'upload', errorCode: resolveUploadErrorCode(message) });
     } finally {
       setStatusMessage(null);
       setIsLoading(false);
     }
-  }, [mode, onParsedData, onPreview, parseExcelOffThread, readFileBuffer, translateError]);
+  }, [mode, onParsedData, onPreview, parseExcelOffThread, readFileBuffer]);
 
   return (
     <div className="space-y-4">
@@ -188,7 +188,7 @@ export default function Uploader({ mode, onModeChange, onPreview, onParsedData }
       <div className="space-y-1">
         {statusMessage && <p className="text-sm text-brand-700">{translateError(statusMessage)}</p>}
         {performanceWarning && <p className="text-sm text-amber-600">{translateError(performanceWarning)}</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600">{translateError(error)}</p>}
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ export default function Home({ onAnalysisReady }: Props) {
   const [manualPeakKwh, setManualPeakKwh] = useState('');
   const [manualCadence, setManualCadence] = useState(60);
   const [manualVoltage, setManualVoltage] = useState<120 | 208 | 240>(240);
-  const [manualError, setManualError] = useState<string | null>(null);
+  const [manualError, setManualError] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>('flexible');
   const { copy, formatDate } = useI18n();
@@ -61,10 +61,10 @@ export default function Home({ onAnalysisReady }: Props) {
   const handleManualSubmit = () => {
     const parsed = Number(manualPeakKwh);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setManualError(copy.home.manualError);
+      setManualError(true);
       return;
     }
-    setManualError(null);
+    setManualError(false);
     const amps = convertToAmps(parsed, 'kWh', manualVoltage, manualCadence);
     setPreview(null);
     setResult(null);
@@ -112,7 +112,7 @@ export default function Home({ onAnalysisReady }: Props) {
 
       {result && (
         <div className="rounded-2xl bg-[#FFC933]/20 p-4 text-sm text-[#0F2941]">
-          {copy.home.summaryPrefix} {result.data.length.toLocaleString()} {copy.home.summaryCoverageIntro}
+          {copy.home.summaryPrefix} {result.data.length.toLocaleString(copy.locale)} {copy.home.summaryCoverageIntro}
           {' '}
           {formatDate(result.coverageStart)} — {formatDate(result.coverageEnd)}.{' '}
           {copy.home.summaryPeakIntro} {result.maxAmps.toFixed(1)} {copy.home.summaryPeakUnits}
@@ -154,7 +154,7 @@ export default function Home({ onAnalysisReady }: Props) {
                   value={manualPeakKwh}
                   onChange={(event) => setManualPeakKwh(event.target.value)}
                   className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
-                  placeholder="e.g. 3.25"
+                  placeholder={copy.home.peakPlaceholder}
                 />
               </label>
               <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -166,7 +166,7 @@ export default function Home({ onAnalysisReady }: Props) {
                 >
                   {[15, 30, 60].map((minutes) => (
                     <option key={minutes} value={minutes}>
-                      {minutes}-minute data
+                      {copy.report.cadenceData(minutes)}
                     </option>
                   ))}
                 </select>
@@ -196,7 +196,7 @@ export default function Home({ onAnalysisReady }: Props) {
               </div>
             </div>
           )}
-          {showManualEntry && manualError && <p className="text-sm text-rose-600">{manualError}</p>}
+          {showManualEntry && manualError && <p className="text-sm text-rose-600">{copy.home.manualError}</p>}
           <p className="text-xs text-slate-500">
             {copy.home.manualDisclaimer}
           </p>

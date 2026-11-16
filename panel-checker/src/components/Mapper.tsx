@@ -28,6 +28,11 @@ export default function Mapper({ preview, onComplete }: Props) {
     voltage: 240
   });
   const [error, setError] = useState<string | null>(null);
+  // Headerless columns are named "Column N" by the parser; only the displayed label is translated.
+  const displayColumn = (column: string) => {
+    const match = column.match(/^Column (\d+)$/);
+    return match ? copy.mapper.columnFallback(match[1]) : column;
+  };
 
   useEffect(() => {
     setMapping((prev) => ({ ...prev, timeColumn: detectedTimeColumn, valueColumn: detectedValueColumn }));
@@ -45,7 +50,7 @@ export default function Mapper({ preview, onComplete }: Props) {
       onComplete(result);
     } catch (err) {
       const message = (err as Error).message;
-      setError(translateError(message));
+      setError(message);
       const lowered = message.toLowerCase();
       const errorCode =
         lowered.includes('timestep') || lowered.includes('cadence')
@@ -77,7 +82,7 @@ export default function Mapper({ preview, onComplete }: Props) {
           >
             {preview.columns.map((column) => (
               <option key={column} value={column}>
-                {column}
+                {displayColumn(column)}
               </option>
             ))}
           </select>
@@ -92,7 +97,7 @@ export default function Mapper({ preview, onComplete }: Props) {
           >
             {preview.columns.map((column) => (
               <option key={column} value={column}>
-                {column}
+                {displayColumn(column)}
               </option>
             ))}
           </select>
@@ -107,7 +112,7 @@ export default function Mapper({ preview, onComplete }: Props) {
           >
             {units.map((unit) => (
               <option key={unit} value={unit}>
-                {unit}
+                {unit === 'Amps' ? copy.units.amps : unit}
               </option>
             ))}
           </select>
@@ -131,7 +136,7 @@ export default function Mapper({ preview, onComplete }: Props) {
         </label>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{translateError(error)}</p>}
 
       <div className="flex flex-wrap gap-2">
         <button

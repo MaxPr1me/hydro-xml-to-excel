@@ -6,13 +6,16 @@ import { computeDemandStats } from '../lib/parse';
 import { convertToKwh } from '../lib/units';
 import { renderDemandProfileSnapshot } from '../lib/snapshots';
 import { trackAnalysisError, trackSummaryDownload } from '../analytics';
-import { useI18n } from '../content/i18n';
+import { buildSnapshotLabels, useI18n } from '../content/i18n';
+import { plotlyLocaleFr } from '../content/plotlyLocaleFr';
+
+Plotly.register(plotlyLocaleFr);
 
 interface Props { data: IntervalDatum[]; chartRef?: MutableRefObject<HTMLDivElement | null>; sectionRef?: MutableRefObject<HTMLElement | null>; }
 type Metric = 'amps' | 'kwh';
 
 export default function DemandChart({ data, chartRef, sectionRef }: Props) {
-  const { copy, formatDate, translateError } = useI18n();
+  const { lang, copy, formatDate, translateError } = useI18n();
   const fallbackRef = useRef<HTMLDivElement | null>(null);
   const ref = chartRef ?? fallbackRef;
   const [metric, setMetric] = useState<Metric>('amps');
@@ -21,7 +24,7 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
 
   const chartDefinition = useMemo(() => {
     if (!data.length) return null;
-    const yLabel = metric === 'amps' ? 'Amps' : 'kWh';
+    const yLabel = metric === 'amps' ? copy.units.amps : 'kWh';
     const hoverSuffix = metric === 'amps' ? 'A' : 'kWh';
     const series = data.map((datum) => (metric === 'amps' ? datum.amps : convertToKwh(datum.value, datum.unit, datum.voltage, datum.intervalMinutes)));
     const peakIndex = data.reduce((maxIndex, datum, index, records) => (datum.amps > records[maxIndex].amps ? index : maxIndex), 0);
@@ -46,9 +49,9 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
       legend: { orientation: 'h', x: 0, y: 1.15 }, font: { family: 'Inter, sans-serif', color: '#021b33' }
     };
     return { data: [trace, peakTrace], layout };
-  }, [copy.chart.peakLine, copy.chart.peakMarker, copy.mapper.time, data, metric]);
+  }, [copy.chart.peakLine, copy.chart.peakMarker, copy.mapper.time, copy.units.amps, data, metric]);
 
-  const chartConfig = useMemo(() => ({ responsive: true, displaylogo: false, modeBarButtonsToRemove: ['select2d', 'lasso2d'] as ModeBarDefaultButtons[] } satisfies Partial<Config>), []);
+  const chartConfig = useMemo(() => ({ responsive: true, displaylogo: false, modeBarButtonsToRemove: ['select2d', 'lasso2d'] as ModeBarDefaultButtons[], locale: lang } satisfies Partial<Config>), [lang]);
 
   useEffect(() => {
     if (!ref.current || !chartDefinition) return;
@@ -60,14 +63,14 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
     if (!ref.current) return;
     try {
       setExportError(null);
-      const snapshot = await renderDemandProfileSnapshot({ chartElement: ref.current, data, metric, labels: { title: copy.chart.title, oneYearPeak: copy.chart.peakLine, percentile95: copy.chart.percentile, viewing: copy.chart.view, highlights: copy.report.title, coverage: copy.chart.coverage, coverageMissing: copy.results.noGraph, cadence: copy.report.cadence, cadenceMissing: 'n/a', dataQuality: copy.chart.dataQuality, intervals: copy.chart.intervals } });
+      const snapshot = await renderDemandProfileSnapshot({ chartElement: ref.current, data, metric, labels: buildSnapshotLabels(copy) });
       trackSummaryDownload({ format: 'png', method: 'verified', hasData: true });
       const link = document.createElement('a');
       link.href = snapshot.dataUrl;
       link.download = `leeps-demand-profile-${metric}.png`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     } catch (error) {
-      setExportError(translateError((error as Error).message || copy.chart.unableExport));
+      setExportError((error as Error).message || 'Unable to export the demand profile.');
       trackAnalysisError({ stage: 'pdf', errorCode: 'PNG_EXPORT_FAILED' });
     }
   };
@@ -81,19 +84,19 @@ export default function DemandChart({ data, chartRef, sectionRef }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-slate-600">{copy.chart.view}</span>
-          <button type="button" className={`rounded-full px-3 py-1 ${metric === 'amps' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => setMetric('amps')}>Amps</button>
+          <button type="button" className={`rounded-full px-3 py-1 ${metric === 'amps' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => setMetric('amps')}>{copy.units.amps}</button>
           <button type="button" className={`rounded-full px-3 py-1 ${metric === 'kwh' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => setMetric('kwh')}>kWh</button>
-          {stats && <span className="ml-4 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{stats.cadenceMinutes}-minute {copy.chart.cadence}</span>}
+          {stats && <span className="ml-4 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{copy.chart.cadenceBadge(stats.cadenceMinutes)}</span>}
           <button type="button" className="ml-4 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600" onClick={exportChart}>{copy.chart.download}</button>
         </div>
       </header>
       <div ref={ref} className="h-[360px] w-full" aria-label={copy.chart.demandChart} />
-      {exportError && <p className="text-sm text-rose-600">{exportError}</p>}
+      {exportError && <p className="text-sm text-rose-600">{translateError(exportError)}</p>}
       {stats && (
         <div className="grid gap-4 text-sm text-slate-600 sm:grid-cols-3">
-          <div><p className="text-xs uppercase tracking-wide text-slate-500">{copy.report.cadence}</p><p className="font-semibold">{stats.cadenceMinutes} minute</p></div>
+          <div><p className="text-xs uppercase tracking-wide text-slate-500">{copy.report.cadence}</p><p className="font-semibold">{copy.chart.cadenceValue(stats.cadenceMinutes)}</p></div>
           <div><p className="text-xs uppercase tracking-wide text-slate-500">{copy.chart.coverage}</p><p className="font-semibold">{formatDate(stats.start)} — {formatDate(stats.end)}</p></div>
-          <div><p className="text-xs uppercase tracking-wide text-slate-500">{copy.chart.dataQuality}</p><p className="font-semibold">{data.length.toLocaleString()} {copy.chart.intervals}</p></div>
+          <div><p className="text-xs uppercase tracking-wide text-slate-500">{copy.chart.dataQuality}</p><p className="font-semibold">{data.length.toLocaleString(copy.locale)} {copy.chart.intervals}</p></div>
         </div>
       )}
     </section>

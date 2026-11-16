@@ -21,6 +21,10 @@ interface SnapshotOptions {
     cadenceMissing: string;
     dataQuality: string;
     intervals: string;
+    amps?: string;
+    formatCadence?: (minutes: number) => string;
+    locale?: string;
+    colon?: string;
   };
 }
 
@@ -86,7 +90,9 @@ export async function renderDemandProfileSnapshot(options: SnapshotOptions): Pro
   context.fillText(labels.title, padding, padding + 10);
 
   context.font = '400 16px Inter, sans-serif';
-  const metricLabel = options.metric === 'amps' ? 'Amps' : 'kWh';
+  const metricLabel = options.metric === 'amps' ? labels.amps ?? 'Amps' : 'kWh';
+  const colon = labels.colon ?? ': ';
+  const formatCadence = labels.formatCadence ?? ((minutes: number) => `${minutes}-minute data`);
   const summaryLine = stats
     ? `${labels.oneYearPeak} ${stats.maxAmps.toFixed(0)} A · ${labels.percentile95} ${stats.percentile95.toFixed(0)} A · ${labels.viewing} ${metricLabel}`
     : `${labels.viewing} ${metricLabel}`;
@@ -103,10 +109,10 @@ export async function renderDemandProfileSnapshot(options: SnapshotOptions): Pro
   context.font = '400 15px Inter, sans-serif';
   const lineHeight = 26;
   const coverageLine = stats
-    ? `${labels.coverage}: ${stats.start.toLocaleDateString()} — ${stats.end.toLocaleDateString()}`
-    : `${labels.coverage}: ${labels.coverageMissing}`;
-  const cadenceLine = stats ? `${labels.cadence}: ${stats.cadenceMinutes}-minute data` : `${labels.cadence}: ${labels.cadenceMissing}`;
-  const qualityLine = `${labels.dataQuality}: ${options.data.length.toLocaleString()} ${labels.intervals}`;
+    ? `${labels.coverage}${colon}${stats.start.toLocaleDateString(labels.locale)} — ${stats.end.toLocaleDateString(labels.locale)}`
+    : `${labels.coverage}${colon}${labels.coverageMissing}`;
+  const cadenceLine = stats ? `${labels.cadence}${colon}${formatCadence(stats.cadenceMinutes)}` : `${labels.cadence}${colon}${labels.cadenceMissing}`;
+  const qualityLine = `${labels.dataQuality}${colon}${options.data.length.toLocaleString(labels.locale)} ${labels.intervals}`;
 
   [coverageLine, cadenceLine, qualityLine].forEach((line, index) => {
     context.fillText(line, padding, metricsTop + 12 + lineHeight * (index + 1));

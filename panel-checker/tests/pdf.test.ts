@@ -22,4 +22,15 @@ describe('summary pdf builder', () => {
     assert.ok(content.includes('Demand profile'));
     assert.ok(content.includes('%%EOF'));
   });
+
+  it('encodes French accents and typographic punctuation as WinAnsi escapes', async () => {
+    const blob = buildSummaryPdf({
+      documentTitle: 'Rapport d’une page — Électricité',
+      sections: [{ title: 'Profil', placeholder: 'Aucun graphique' }]
+    });
+    const content = Buffer.from(await blob.arrayBuffer()).toString('latin1');
+
+    assert.ok(content.includes('/Encoding /WinAnsiEncoding'));
+    assert.ok(content.includes('(Rapport d\\222une page \\227 \\311lectricit\\351) Tj'));
+  });
 });

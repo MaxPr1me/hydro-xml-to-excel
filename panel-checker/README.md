@@ -29,7 +29,7 @@ _The UI supports Canadian English and Canadian French with an in-header language
 - 🧮 Plain-language panel calculator that anchors to the absolute one-year max (×1.25), differentiates continuous vs. non-continuous loads, and lets you stack what-if scenarios.
 - 🧾 Manual entry path that converts a user-supplied peak kWh reading into amps so crews can run the calculator even when no file is available; the UI clearly flags these runs as unverified and disables the graph.
 - 📄 Download-ready PDF summary that embeds the demand profile chart (or a placeholder when no graph exists), highlights the verdict, and lists proposed loads in a permit-friendly layout.
-- 🌐 English/French copy, large tap targets, and tablet-friendly layout for field use.
+- 🌐 English/French copy (including validation errors, chart controls, and PNG/PDF exports), large tap targets, and tablet-friendly layout for field use.
 - 🔗 Footer license link resolves dynamically for forks (relative LICENSE fallback), and the safety contact uses anti-scrape formatting.
 - 🔀 Mode toggle for generic Flexible interval data vs. NS Power SMOC XLSX exports; the SMOC path reads "Interval Period End Timestamp Local" and uses the higher of Max A(a)/Max A(c) per interval.
 

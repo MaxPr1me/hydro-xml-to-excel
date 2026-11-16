@@ -4,7 +4,7 @@ import { computeDemandStats } from '../lib/parse';
 import { renderDemandProfileSnapshot, renderElementSnapshot, snapshotToBytes } from '../lib/snapshots';
 import { buildSummaryPdf } from '../lib/pdf';
 import { trackAnalysisError, trackSummaryDownload } from '../analytics';
-import { useI18n } from '../content/i18n';
+import { buildSnapshotLabels, useI18n } from '../content/i18n';
 
 interface Props {
   analysis: AnalysisState;
@@ -35,7 +35,7 @@ export default function ReportCard({ analysis, verdict, reportSectionRef, demand
 
     try {
       if (hasIntervalData && chartRef?.current) {
-        const snapshot = await renderDemandProfileSnapshot({ chartElement: chartRef.current, data, metric: 'amps', labels: { title: copy.chart.title, oneYearPeak: copy.chart.peakLine, percentile95: copy.chart.percentile, viewing: copy.chart.view, highlights: copy.report.title, coverage: copy.chart.coverage, coverageMissing: copy.results.noGraph, cadence: copy.report.cadence, cadenceMissing: 'n/a', dataQuality: copy.chart.dataQuality, intervals: copy.chart.intervals } });
+        const snapshot = await renderDemandProfileSnapshot({ chartElement: chartRef.current, data, metric: 'amps', labels: buildSnapshotLabels(copy) });
         sections.push({ title: copy.chart.title, image: { data: snapshotToBytes(snapshot), width: snapshot.width, height: snapshot.height } });
       } else {
         await addElementSnapshot(copy.chart.title, demandSectionRef?.current, copy.results.noGraph);
@@ -80,7 +80,7 @@ export default function ReportCard({ analysis, verdict, reportSectionRef, demand
       {stats && (
         <dl className="grid gap-4 sm:grid-cols-2">
           <Stat label={copy.report.coverage} value={`${formatDate(stats.start)} — ${formatDate(stats.end)}`} />
-          <Stat label={copy.report.cadence} value={`${stats.cadenceMinutes}-minute data`} />
+          <Stat label={copy.report.cadence} value={copy.report.cadenceData(stats.cadenceMinutes)} />
           <Stat label={copy.report.peakAmps} value={`${stats.maxAmps.toFixed(1)} A`} />
           <Stat label={copy.report.verdict} value={`${verdictLabel} (${verdict.availableMargin.toFixed(1)} A ${copy.report.margin})`} />
         </dl>
@@ -88,7 +88,7 @@ export default function ReportCard({ analysis, verdict, reportSectionRef, demand
       {manualMode && analysis.manualPeak && (
         <dl className="grid gap-4 sm:grid-cols-2">
           <Stat label={copy.report.manualPeak} value={analysis.manualPeak.kwh.toString()} />
-          <Stat label={copy.report.manualCadence} value={`${analysis.manualPeak.intervalMinutes}-minute`} />
+          <Stat label={copy.report.manualCadence} value={copy.report.manualCadenceValue(analysis.manualPeak.intervalMinutes)} />
           <Stat label={copy.report.manualAmps} value={`${analysis.manualPeak.amps.toFixed(1)} A`} />
           <Stat label={copy.report.verdict} value={`${verdictLabel} (${verdict.availableMargin.toFixed(1)} A ${copy.report.margin})`} />
         </dl>

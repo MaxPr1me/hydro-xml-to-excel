@@ -19,6 +19,8 @@ Scope: entire repository.
 - Add or modify i18n keys in both English and French locales.
 - Verify the language toggle updates the full UI without resetting state.
 - Search for untranslated hardcoded strings before committing.
+- New user-facing messages thrown from `src/lib`, workers, or components must be added to `messages` in `panel-checker/src/content/i18n.ts` (English text must match the source exactly) so `localizeError` can translate them; store raw messages in state and translate at render so the language toggle re-translates them.
+  FR : Les nouveaux messages destinés aux utilisateurs levés dans `src/lib`, les workers ou les composants doivent être ajoutés à `messages` dans `panel-checker/src/content/i18n.ts` (le texte anglais doit correspondre exactement à la source) afin que `localizeError` puisse les traduire; conserver les messages bruts dans l’état et les traduire au rendu pour que le changement de langue les retraduise.
 - Confirm no analysis, parsing, or calculation logic changed.
 
 ## Decision-making / Prise de décision
@@ -59,6 +61,7 @@ changed and why. This keeps future agents oriented.
 - 2026-11-16 – Fixed mobile install: removed duplicate static `public/manifest.json` (it shadowed the plugin manifest), added PNG/maskable/apple-touch icons, and synced `vite.config.js` (loaded before `.ts`) with `vite.config.ts`.
 - 2026-11-16 – Added bilingual decision-making policy (no assumptions, ask before choosing paths, disclose shortcuts) and changed panel calculator defaults (breaker loading off except NS SMOC at 80%; adjustment factor on at 125%).
 - 2026-11-16 – Added bilingual fork-compatibility policy: code must stay dynamic because it is forked and updated downstream at https://canmet-energy.github.io/leep-spark-tool/.
+- 2026-11-16 – Completed EN-CA/FR-CA parity: full French copy (no English fallbacks), `messages` catalogue + pattern matching for `src/lib` errors, WinAnsi-encoded PDF text for accents, localized PNG snapshots, and Plotly French locale (`src/content/plotlyLocaleFr.ts`).
 
 ## Tasks
 

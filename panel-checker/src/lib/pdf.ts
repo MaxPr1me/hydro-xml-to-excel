@@ -33,8 +33,27 @@ function concatBytes(...arrays: Uint8Array[]): Uint8Array {
   return merged;
 }
 
+const winAnsiSpecials: Record<string, number> = {
+  '€': 0x80, '‚': 0x82, '„': 0x84, '…': 0x85, '‘': 0x91, '’': 0x92, '“': 0x93, '”': 0x94, '•': 0x95, '–': 0x96, '—': 0x97
+};
+
+// Text strings are emitted as WinAnsiEncoding octal escapes so accented (FR-CA) characters render with the base Helvetica font.
 function escapePdfText(text: string) {
-  return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  let result = '';
+  for (const char of text) {
+    if (char === '\\' || char === '(' || char === ')') {
+      result += `\\${char}`;
+      continue;
+    }
+    const code = char.codePointAt(0) ?? 0x3f;
+    if (code >= 0x20 && code < 0x7f) {
+      result += char;
+      continue;
+    }
+    const winAnsi = code >= 0xa0 && code <= 0xff ? code : winAnsiSpecials[char];
+    result += winAnsi === undefined ? '?' : `\\${winAnsi.toString(8).padStart(3, '0')}`;
+  }
+  return result;
 }
 
 function buildCombinedSectionsContent(
@@ -129,7 +148,7 @@ export function buildSummaryPdf(options: SummaryPdfOptions): Blob {
 
   const catalog = encode(`${catalogId} 0 obj\n<< /Type /Catalog /Pages ${pagesId} 0 R >>\nendobj\n`);
   const pages = encode(`${pagesId} 0 obj\n<< /Type /Pages /Kids [${kidsRefs}] /Count 1 >>\nendobj\n`);
-  const font = encode(`${fontId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`);
+  const font = encode(`${fontId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n`);
 
   const addObject = (id: number, bytes: Uint8Array) => {
     offsetsById[id] = position;

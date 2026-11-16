@@ -126,7 +126,7 @@ export default function App() {
               </a>
             </p>
             <p>
-              {copy.footer.contact}: <span className="font-semibold">{copy.footer.contactValue}</span>
+              {copy.footer.contact}{copy.colon}<span className="font-semibold">{copy.footer.contactValue}</span>
             </p>
           </div>
         </footer>
