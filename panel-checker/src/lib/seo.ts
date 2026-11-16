@@ -1,6 +1,7 @@
-import { Language } from '../content/i18n';
+import { Language, translations } from '../content/i18n';
 
 type SeoCopy = {
+  name: string;
   title: string;
   description: string;
   softwareDescription: string;
@@ -8,6 +9,7 @@ type SeoCopy = {
 
 const SEO_COPY: Record<Language, SeoCopy> = {
   en: {
+    name: 'LEEP SPARK Tool',
     title: 'LEEP SPARK Tool | Electrical Panel Sizing Calculator Canada',
     description:
       'Save thousands by avoiding unnecessary electrical panel upgrades. Analyze one year of real utility data using the LEEP SPARK Tool.',
@@ -15,6 +17,7 @@ const SEO_COPY: Record<Language, SeoCopy> = {
       'Static web app for Canadian panel upgrade assessments using Green Button, CSV, and XLSX interval demand data.'
   },
   fr: {
+    name: 'Outil LEEP SPARK',
     title: 'Outil LEEP SPARK | Calculateur canadien de dimensionnement de panneau électrique',
     description:
       'Économisez des milliers de dollars en évitant les mises à niveau inutiles du panneau électrique. Analysez une année complète de données réelles du service public avec l’outil LEEP SPARK.',
@@ -22,8 +25,6 @@ const SEO_COPY: Record<Language, SeoCopy> = {
       'Application Web statique pour évaluer les mises à niveau de panneaux au Canada avec des données intervalle Green Button, CSV et XLSX.'
   }
 };
-
-const ORG_NAME = 'CanmetENERGY-Ottawa';
 
 function upsertMeta(name: string, content: string, attribute: 'name' | 'property' = 'name') {
   let node = document.head.querySelector(`meta[${attribute}="${name}"]`) as HTMLMetaElement | null;
@@ -72,7 +73,7 @@ export function applySeo(lang: Language, pathname: string) {
   upsertMeta('og:type', 'website', 'property');
   upsertMeta('og:locale', lang === 'fr' ? 'fr_CA' : 'en_CA', 'property');
   upsertMeta('og:locale:alternate', lang === 'fr' ? 'en_CA' : 'fr_CA', 'property');
-  upsertMeta('og:site_name', 'LEEP SPARK Tool', 'property');
+  upsertMeta('og:site_name', copy.name, 'property');
   upsertMeta('og:title', copy.title, 'property');
   upsertMeta('og:description', copy.description, 'property');
   upsertMeta('og:url', canonical, 'property');
@@ -99,7 +100,7 @@ export function applySeo(lang: Language, pathname: string) {
     {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
-      name: 'LEEP SPARK Tool',
+      name: copy.name,
       inLanguage: lang === 'fr' ? 'fr-CA' : 'en-CA',
       description: copy.softwareDescription,
       applicationCategory: 'UtilitiesApplication',
@@ -111,7 +112,7 @@ export function applySeo(lang: Language, pathname: string) {
       },
       provider: {
         '@type': 'Organization',
-        name: ORG_NAME
+        name: translations[lang].organization
       },
       url: canonical
     },

@@ -121,6 +121,9 @@ back to `VITE_DEFAULT_BRANCH` (or `main`). Set `VITE_REPO_URL` and `VITE_DEFAULT
 - EN: SEO metadata (title/description/Open Graph/Twitter/JSON-LD/canonical/hreflang) is language-aware and updated client-side for `?lang=en` and `?lang=fr`.
 - FR: Les métadonnées SEO (title/description/Open Graph/Twitter/JSON-LD/canonical/hreflang) sont adaptées à la langue et mises à jour côté client pour `?lang=en` et `?lang=fr`.
 
+- EN: The hidden overview and FAQ include complete English and French copy. Metadata uses localized tool names and the same organization name as the UI: CanmetENERGY-Ottawa in English and CanmetÉNERGIE-Ottawa in French.
+- FR: La présentation et la foire aux questions masquées comprennent les textes complets en anglais et en français. Les métadonnées utilisent les noms traduits de l’outil et le même nom d’organisation que l’interface : CanmetENERGY-Ottawa en anglais et CanmetÉNERGIE-Ottawa en français.
+
 - EN: Root crawl files live in `panel-checker/public/robots.txt` and `panel-checker/public/sitemap.xml`.
 - FR: Les fichiers d’exploration à la racine se trouvent dans `panel-checker/public/robots.txt` et `panel-checker/public/sitemap.xml`.
 
