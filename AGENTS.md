@@ -37,6 +37,7 @@ changed and why. This keeps future agents oriented.
 - 2025-11-21 – GitHub Pages workflow now targets the repo's default branch and app metadata uses relative URLs for forks.
 - 2025-11-22 – Added fork-friendly coding policy to keep branches, URLs, and org names dynamic.
 - 2026-02-13 – Added static bilingual SEO architecture (meta/JSON-LD/canonical+hrelang), hidden crawlable FAQ copy, and root robots/sitemap guidance for GitHub Pages + Search Console.
+- 2026-11-16 – Fixed mobile install: removed duplicate static `public/manifest.json` (it shadowed the plugin manifest), added PNG/maskable/apple-touch icons, and synced `vite.config.js` (loaded before `.ts`) with `vite.config.ts`.
 
 ## Tasks
 
