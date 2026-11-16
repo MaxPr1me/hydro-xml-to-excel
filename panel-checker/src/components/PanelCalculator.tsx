@@ -19,13 +19,13 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
   const [inputs, setInputs] = useState<PanelInputs>({
     serviceRating: 100,
     mainBreaker: 100,
-    breakerLoadingEnabled: true,
+    breakerLoadingEnabled: analysis.mode === 'ns-power-smoc',
     breakerLoadingPercent: 80,
     busRating: 225,
     voltage: 240,
     existingLoads: [],
     newLoads: [],
-    existingAdjustmentEnabled: false,
+    existingAdjustmentEnabled: true,
     existingAdjustmentPercent: 125
   });
 
@@ -37,7 +37,6 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
     return provenDemand(analysis.data);
   }, [analysis, manualMode]);
 
-  const cadenceMinutes = useMemo(() => inferCadenceMinutes(analysis), [analysis]);
   const resetKey = useMemo(
     () => `${analysis.source}-${analysis.data.length}-${analysis.manualPeak?.amps ?? 'none'}`,
     [analysis]
@@ -69,11 +68,13 @@ export default function PanelCalculator({ analysis, onVerdictChange, sectionRef 
   useEffect(() => {
     setInputs((prev) => ({
       ...prev,
-      breakerLoadingEnabled: true,
-      existingAdjustmentEnabled: cadenceMinutes === 60,
-      existingAdjustmentPercent: cadenceMinutes === 60 ? 125 : prev.existingAdjustmentPercent
+      // NS Power SMOC uses 80% breaker loading; other modes default to 100% (unchecked).
+      breakerLoadingEnabled: analysis.mode === 'ns-power-smoc',
+      breakerLoadingPercent: 80,
+      existingAdjustmentEnabled: true,
+      existingAdjustmentPercent: 125
     }));
-  }, [cadenceMinutes, resetKey]);
+  }, [analysis.mode, resetKey]);
 
   const verdict = useMemo<PanelVerdict>(() => calculateVerdict(inputs, baseline), [inputs, baseline]);
 
@@ -392,11 +393,4 @@ function provenDemand(records: IntervalDatum[]) {
   if (!records.length) return 0;
   const peak = records.reduce((max, datum) => Math.max(max, datum.amps), 0);
   return Number(peak.toFixed(1));
-}
-
-function inferCadenceMinutes(analysis: AnalysisState) {
-  if (analysis.manualPeak) {
-    return analysis.manualPeak.intervalMinutes;
-  }
-  return analysis.data[0]?.intervalMinutes ?? null;
 }

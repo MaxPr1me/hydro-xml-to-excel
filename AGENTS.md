@@ -21,6 +21,17 @@ Scope: entire repository.
 - Search for untranslated hardcoded strings before committing.
 - Confirm no analysis, parsing, or calculation logic changed.
 
+## Decision-making / Prise de décision
+
+- EN: Never make assumptions. When requirements, scope, defaults, or behaviour are unclear, ask the maintainer before acting.
+- FR : Ne jamais faire de suppositions. Lorsque les exigences, la portée, les valeurs par défaut ou le comportement ne sont pas clairs, consulter le responsable avant d’agir.
+
+- EN: When more than one reasonable path forward exists, present the options and seek feedback before choosing one.
+- FR : Lorsqu’il existe plus d’une option raisonnable, présenter les options et obtenir une rétroaction avant d’en choisir une.
+
+- EN: Never take shortcuts or make assumptions without explicitly noting them after approval. Every shortcut, workaround, or assumption must be listed in the plan and in the final summary so the maintainer can correct it.
+- FR : Ne jamais prendre de raccourcis ni faire de suppositions sans les signaler explicitement après l’approbation. Chaque raccourci, contournement ou supposition doit figurer dans le plan et dans le résumé final afin que le responsable puisse le corriger.
+
 ## Self-update policy
 
 After every major change to build tooling, hosting, or folder structure, append a bullet to the change log below describing what
@@ -38,6 +49,7 @@ changed and why. This keeps future agents oriented.
 - 2025-11-22 – Added fork-friendly coding policy to keep branches, URLs, and org names dynamic.
 - 2026-02-13 – Added static bilingual SEO architecture (meta/JSON-LD/canonical+hrelang), hidden crawlable FAQ copy, and root robots/sitemap guidance for GitHub Pages + Search Console.
 - 2026-11-16 – Fixed mobile install: removed duplicate static `public/manifest.json` (it shadowed the plugin manifest), added PNG/maskable/apple-touch icons, and synced `vite.config.js` (loaded before `.ts`) with `vite.config.ts`.
+- 2026-11-16 – Added bilingual decision-making policy (no assumptions, ask before choosing paths, disclose shortcuts) and changed panel calculator defaults (breaker loading off except NS SMOC at 80%; adjustment factor on at 125%).
 
 ## Tasks
 
