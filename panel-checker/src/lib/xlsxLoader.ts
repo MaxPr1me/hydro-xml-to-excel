@@ -1,5 +1,3 @@
-const SHEETJS_URL = 'https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs';
-
 export interface SheetDataModule {
   read: (
     data: ArrayBuffer,
@@ -44,13 +42,19 @@ let cachedModule: Promise<SheetDataModule> | null = null;
 
 export async function loadXlsx(): Promise<SheetDataModule> {
   if (!cachedModule) {
-    cachedModule = import(/* @vite-ignore */ SHEETJS_URL).then((mod) => {
-      const resolved = (mod as { default?: SheetDataModule }).default ?? (mod as SheetDataModule);
-      if (!resolved || typeof resolved.read !== 'function') {
-        throw new Error('SheetJS library failed to load.');
-      }
-      return resolved;
-    });
+    cachedModule = import('xlsx')
+      .then((mod) => {
+        const resolved = (mod as unknown as { default?: SheetDataModule }).default ?? (mod as unknown as SheetDataModule);
+        if (!resolved || typeof resolved.read !== 'function') {
+          throw new Error('SheetJS library failed to load.');
+        }
+        return resolved;
+      })
+      .catch((err: unknown) => {
+        // Allow a later upload to retry instead of reusing the rejected promise.
+        cachedModule = null;
+        throw err;
+      });
   }
   return cachedModule;
 }
